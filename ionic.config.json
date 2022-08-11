@@ -1,0 +1,7 @@
+{
+  "name": "Rollo",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react"
+}
