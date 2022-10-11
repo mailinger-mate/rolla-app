@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonButton, IonIcon, IonItem, IonLabel, IonList, IonListHeader } from '@ionic/react';
+import { IonButton, IonIcon, IonItem, IonItemDivider, IonItemSliding, IonLabel, IonList, IonListHeader, useIonLoading } from '@ionic/react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { addOutline, cloudDone, cloudOfflineOutline, starOutline } from 'ionicons/icons';
@@ -7,34 +7,73 @@ import { getVehicles } from '../../utils/db/vehicle';
 
 interface Props {
     station?: string;
+    routerLink?: string;
 }
 
 const VehicleList = React.memo<Props>(({
+    routerLink,
     station,
 }) => {
     const { db } = useFirebaseContext();
     const [value, loading, error] = useCollection(getVehicles(db, { station }));
+    const [present, dismiss] = useIonLoading();
+
+    React.useEffect(() => {
+        loading ? present() : dismiss();
+    }, [loading]);
+
+    const remove = (id: string) => {
+        // deleteStation(db, id);
+    };
+
+    const list = React.useMemo(() => {
+        if (!value) return null;
+        const items: React.ReactElement[] = [];
+        const initials: string[] = [];
+
+        value.docs.forEach((vehicle) => {
+            const id = vehicle.id;
+            const { name, isOnline } = vehicle.data();
+            const initial = name[0];
+
+            if (initials.indexOf(initial) < 0) {
+                initials.push(initial);
+                items.push((
+                    <IonItemDivider key={initial}>
+                        <IonLabel className="ion-text-uppercase">{initial}</IonLabel>
+                    </IonItemDivider>
+                ));
+            }
+
+            items.push((
+                <IonItemSliding
+                    key={id}
+                >
+                    <IonItem
+                        routerLink={`${routerLink}/${id}`}
+                        detail={true}
+                    >
+                        <IonIcon
+                            icon={isOnline ? cloudDone : cloudOfflineOutline}
+                            slot="end"
+                            size="small"
+                            color="danger"
+                        />
+                        <IonLabel>
+                            <h3>{name}</h3>
+                            <p>{id}</p>
+                        </IonLabel>
+                    </IonItem>
+                </IonItemSliding>
+            ));
+        });
+
+        return items;
+    }, [value]);
 
     return (
         <IonList>
-            <IonListHeader>
-                <IonLabel><h2>Vehicles</h2></IonLabel>
-                <IonButton>
-                    <IonIcon icon={addOutline} slot="icon-only" />
-                </IonButton>
-            </IonListHeader>
-            {value && value.docs.map(vehicle => {
-                const { isOnline, name } = vehicle.data();
-                return (
-                    <IonItem detail={true} key={vehicle.id} button={true}>
-                        <IonIcon icon={isOnline ? cloudDone : cloudOfflineOutline} slot="start" />
-                        <IonLabel>
-                            <h3>{vehicle.id}</h3>
-                            <p>{name}</p>
-                        </IonLabel>
-                    </IonItem>
-                );
-            })}
+            {list}
         </IonList>
     )
 });

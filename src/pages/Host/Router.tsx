@@ -1,19 +1,27 @@
-import { IonContent, IonHeader, IonPage, IonRouterOutlet, IonTitle, IonToolbar } from '@ionic/react';
+import { IonRouterOutlet } from '@ionic/react';
 import { Route, RouteComponentProps } from 'react-router';
-import Edit from './Station/Edit';
+import StationItemPage from './Station/Item';
 import Host from './Host';
 import { Action, Path } from '../path';
-import List from './Station/List';
+import StationListPage from './Station/List';
+import VehicleItemPage from './Vehicle/Item';
+import VehicleListPage from './Vehicle/List';
 
 const HostRoute: React.FC<RouteComponentProps> = ({ match }) => {
     const station = match.url + '/' + Path.station;
+    const vehicle = match.url + '/' + Path.vehicle;
     return (
         // <IonPage>
             <IonRouterOutlet>
                 <Route path={match.url} exact component={Host} />
-                <Route path={station} exact component={List} />
-                <Route path={station + '/:id'} component={Edit} />
-                <Route path={station + '/' + Action.new} exact component={Edit} />
+    
+                <Route path={station} exact component={StationListPage} />
+                <Route path={station + '/:id'} component={StationItemPage} />
+                <Route path={station + '/' + Action.new} exact component={StationItemPage} />
+        
+                <Route path={vehicle} exact component={VehicleListPage} />
+                <Route path={vehicle + '/:id'} component={VehicleItemPage} />
+                <Route path={vehicle + '/' + Action.new} exact component={VehicleItemPage} />
             </IonRouterOutlet>
             // {/* <IonHeader>
             //     <IonToolbar>

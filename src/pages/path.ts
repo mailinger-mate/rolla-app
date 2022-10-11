@@ -4,6 +4,7 @@ export enum Path {
     vehicle = 'vehicle',
     account = 'account',
     payment = 'payment',
+    security = 'security',
 };
 
 export enum Action {

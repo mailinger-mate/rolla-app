@@ -3,7 +3,8 @@ import { IonButton, IonInput, IonItem, IonLabel, IonList } from '@ionic/react';
 import { BleClient, BleDevice, textToDataView } from '@capacitor-community/bluetooth-le';
 import * as OTPAuth from 'otpauth';
 import { useFirebaseContext } from '../../contexts/Firebase';
-import { getAccess } from '../../utils/db/access';
+import { getVehicleSecurity } from '../../utils/db/security';
+import { getDoc } from 'firebase/firestore';
 
 const serviceUuid = '5afe1eaf-f000-4ecb-ab75-f9ec2e1f1f10';
 const lockUuid = '0be70cad-92aa-48c3-b26a-330e339aa163';
@@ -89,10 +90,10 @@ const VehicleConnection: React.FC = () => {
     const lock = React.useCallback(async () => {
         if (!connectedDevice?.name) return;
 
-        const access = await getAccess(db, connectedDevice?.name);
-        const { key } = access.data()!;
+        const access = await getVehicleSecurity(db, connectedDevice?.name);
+        const { accessKey } = access.data()!;
     
-        const secret = OTPAuth.Secret.fromUTF8(key);
+        const secret = OTPAuth.Secret.fromUTF8(accessKey);
         const hotp = new OTPAuth.HOTP({ secret }).generate({ counter });
         setOtp(hotp);
         setTimeout(() => setOtp(undefined), 2000);

@@ -39,7 +39,7 @@ const Host: React.FC<RouteComponentProps> = ({ match }) => {
                         <IonNote slot="end">3</IonNote>
                         <IonLabel>Stations</IonLabel>
                     </IonItem>
-                    <IonItem detail routerLink={Path.vehicle}>
+                    <IonItem routerLink={`${match.url}/${Path.vehicle}`} detail>
                         <IonIcon icon={bicycleOutline} slot="start"></IonIcon>
                         <IonIcon icon={cloudOfflineOutline} slot="end" size="small" color="danger"></IonIcon>
                         <IonNote slot="end">12</IonNote>

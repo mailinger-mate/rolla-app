@@ -42,6 +42,7 @@ import '@ionic/react/css/display.css';
 import './theme/variables.css';
 import GoogleMapProvider from './contexts/GoogleMap';
 import HostRoute from './pages/Host/Router';
+import RentRoute from './pages/Rent/Router';
 
 // dotenv.config();
 
@@ -58,9 +59,10 @@ const App: React.FC = () => (
                         <IonSplitPane contentId="main">
                             <IonRouterOutlet id="main">
                                 <Route exact path="/">
-                                    <Redirect to="/ride" />
+                                    <Redirect to="/rent" />
                                 </Route>
                                 <Route path="/host" component={HostRoute} />
+                                <Route path="/rent" component={RentRoute} />
                             </IonRouterOutlet>
                         </IonSplitPane>
                     </IonReactRouter>

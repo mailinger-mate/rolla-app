@@ -1,14 +1,14 @@
 import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonPage, IonProgressBar, IonTitle, IonToolbar } from '@ionic/react';
 import { add } from 'ionicons/icons';
 import { RouteComponentProps } from 'react-router';
-import StationList from '../../../components/Station/List';
+import VehicleList from '../../../components/Vehicle/List';
 import { Action, Path } from '../../path';
 
 type Props = RouteComponentProps<{
     id: string;
 }>
 
-const List: React.FC<Props> = ({ match }) => {
+const VehicleListPage: React.FC<Props> = ({ match }) => {
     return (
         <IonPage>
             <IonHeader>
@@ -16,7 +16,7 @@ const List: React.FC<Props> = ({ match }) => {
                     <IonButtons slot="start">
                         <IonBackButton defaultHref={`/${Path.host}`} />
                     </IonButtons>
-                    <IonTitle>Stations</IonTitle>
+                    <IonTitle>Vehicles</IonTitle>
                     <IonButtons slot="end">
                         <IonButton routerLink={`${match.url}/${Action.new}`}>
                             <IonIcon slot="icon-only" icon={add} />
@@ -25,10 +25,10 @@ const List: React.FC<Props> = ({ match }) => {
                 </IonToolbar>
             </IonHeader>
             <IonContent fullscreen>
-                <StationList routerLink={match.url} />
+                <VehicleList routerLink={match.url} />
             </IonContent>
         </IonPage>
     );
 };
 
-export default List;
+export default VehicleListPage;

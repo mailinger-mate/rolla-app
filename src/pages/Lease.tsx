@@ -1,7 +1,7 @@
 import { IonContent, IonHeader, IonPage, IonRouterOutlet, IonTitle, IonToolbar } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route, RouteComponentProps } from 'react-router';
-import Edit from './Host/Station/Edit';
+import Edit from './Host/Station/Item';
 import './Tab3.css';
 
 type HostPageProps = RouteComponentProps<{

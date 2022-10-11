@@ -1,6 +1,6 @@
+import React from 'react';
 import { IonIcon, IonItem, IonItemDivider, IonItemOption, IonItemOptions, IonItemSliding, IonLabel, IonList, useIonLoading } from '@ionic/react';
 import { cloudOfflineOutline, flashOffOutline } from 'ionicons/icons';
-import React from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { deleteStation, getStations } from '../../utils/db/station';
