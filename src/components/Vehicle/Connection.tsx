@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonButton, IonInput, IonItem, IonLabel, IonList } from '@ionic/react';
+import { IonButton, IonInput, IonItem, IonLabel, IonList, IonNote } from '@ionic/react';
 import { BleClient, BleDevice, textToDataView } from '@capacitor-community/bluetooth-le';
 import * as OTPAuth from 'otpauth';
 import { useFirebaseContext } from '../../contexts/Firebase';
@@ -11,7 +11,7 @@ const lockUuid = '0be70cad-92aa-48c3-b26a-330e339aa163';
 const otpUuid = 'e313b008-9fb4-4f5e-95a7-3dc5ee030543';
 const nonceUuid = 'b0446719-6abf-4eac-8f15-9f94062b0763';
 
-const VehicleConnection: React.FC = () => {
+const VehicleConnection = React.memo(() => {
     const { db } = useFirebaseContext();
 
     const [connectedDevice, setConnectedDevice] = React.useState<BleDevice>();
@@ -19,6 +19,8 @@ const VehicleConnection: React.FC = () => {
     const [counter, setNonce] = React.useState<number>();
     const [id, setId] = React.useState<string>();
     const [otp, setOtp] = React.useState<string>();
+    const [adminKey, setAdminKey] = React.useState<string>();
+    const [error, setError] = React.useState<string>();
 
     const readNonce = (dataView: DataView) => {
         setNonce(dataView.getUint32(0, true));
@@ -39,7 +41,7 @@ const VehicleConnection: React.FC = () => {
 
             const device = await BleClient.requestDevice({
                 services: [serviceUuid],
-                name: id,
+                // name: id,
             });
 
             if (!device.name) return;
@@ -48,9 +50,6 @@ const VehicleConnection: React.FC = () => {
                 device.deviceId,
                 disconnect,
             );
-
-            setConnectedDevice(device);
-            setId(device.name);
 
             readLock(await BleClient.read(device.deviceId, serviceUuid, lockUuid));
             readNonce(await BleClient.read(device.deviceId, serviceUuid, nonceUuid));
@@ -75,11 +74,12 @@ const VehicleConnection: React.FC = () => {
             //     await BleClient.disconnect(device.deviceId);
             //     console.log('disconnected from device', device);
             // }, 10000);
-
+            
             setConnectedDevice(device);
-
-        } catch (error) {
-            console.error(error);
+            setId(device.name);
+        } catch (e: any) {
+            setError(e.message);
+            console.log(e);
         }
     }, [connectedDevice]);
 
@@ -87,18 +87,24 @@ const VehicleConnection: React.FC = () => {
         setConnectedDevice(undefined);
     };
 
-    const lock = React.useCallback(async () => {
+    const lock = React.useCallback(() => {
         if (!connectedDevice?.name) return;
 
-        const access = await getVehicleSecurity(db, connectedDevice?.name);
-        const { accessKey } = access.data()!;
-    
-        const secret = OTPAuth.Secret.fromUTF8(accessKey);
-        const hotp = new OTPAuth.HOTP({ secret }).generate({ counter });
-        setOtp(hotp);
-        setTimeout(() => setOtp(undefined), 2000);
-        await BleClient.write(connectedDevice.deviceId, serviceUuid, otpUuid, textToDataView(hotp));
-    }, [connectedDevice, counter]);
+        const key = adminKey
+            ? Promise.resolve(adminKey)
+            : getVehicleSecurity(db, connectedDevice.name).then(access => {
+                const { accessKey } = access.data()!;
+                return accessKey;
+            });
+
+        return key.then(key => {
+            const secret = OTPAuth.Secret.fromUTF8(key);
+            const hotp = new OTPAuth.HOTP({ secret }).generate({ counter });
+            setOtp(hotp);
+            // setTimeout(() => setOtp(undefined), 2000);
+            return BleClient.write(connectedDevice.deviceId, serviceUuid, otpUuid, textToDataView(hotp));
+        });
+    }, [connectedDevice, counter, adminKey]);
 
     return (
         <IonList>
@@ -109,6 +115,13 @@ const VehicleConnection: React.FC = () => {
                     required={true}
                     value={id}
                     onIonChange={e => setId(e.detail.value!)}
+                />
+            </IonItem>
+            <IonItem>
+                <IonLabel position="floating">Admin Key</IonLabel>
+                <IonInput
+                    value={adminKey}
+                    onIonChange={e => setAdminKey(e.detail.value!)}
                 />
             </IonItem>
             <IonItem>
@@ -143,6 +156,10 @@ const VehicleConnection: React.FC = () => {
             </IonButton>
         </IonList>
     )
-}
+});
 
-export default VehicleConnection;
+VehicleConnection.displayName = 'VehicleConnection';
+
+export {
+    VehicleConnection
+};

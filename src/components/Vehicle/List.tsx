@@ -15,7 +15,7 @@ const VehicleList = React.memo<Props>(({
     station,
 }) => {
     const { db } = useFirebaseContext();
-    const [value, loading, error] = useCollection(getVehicles(db, { station }));
+    const [value, loading, error] = useCollection(getVehicles(db, station));
     const [present, dismiss] = useIonLoading();
 
     React.useEffect(() => {
@@ -74,6 +74,7 @@ const VehicleList = React.memo<Props>(({
     return (
         <IonList>
             {list}
+            {error?.message}
         </IonList>
     )
 });

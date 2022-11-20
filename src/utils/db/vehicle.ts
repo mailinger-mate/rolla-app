@@ -1,21 +1,18 @@
 import {
     collection, doc, query, where,
     getDoc, getDocs,
-    DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, orderBy,
+    DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, orderBy, setDoc,
 } from "firebase/firestore";
 import { Path } from "./enums";
 
-interface Data extends DocumentData {
-    security: DocumentReference;
-}
-
-interface Vehicle {
+export interface Vehicle {
     // id: string;
     name: string;
     model: string;
     licenseId: string;
     isOnline: boolean;
     security: DocumentReference;
+    station: DocumentReference;
 }
 
 const converter = {
@@ -28,33 +25,48 @@ const converter = {
         options: SnapshotOptions
     ): Vehicle {
         const {
-            id,
+            // id,
             licenseId,
             model,
             name,
             security,
-        } = snapshot.data(options)! as Data;
+            station,
+        } = snapshot.data(options);
         return {
             // id,
-            name,
             isOnline: !!security,
-            security,
             licenseId,
             model,
+            name,
+            security,
+            station,
         };
     }
 };
-
-interface Query {
-    station?: string;
-}
 
 export const getVehicle = (db: Firestore, id: string) => {
     return doc(db, Path.vehicle, id).withConverter(converter);
 }
 
-export const getVehicles = (db: Firestore, { station }: Query = {}) => {
+export const getVehicles = (
+    db: Firestore,
+    stationId?: string
+) => {
     const constraints = [orderBy('name')];
-    if (station) constraints.push(where('station', '==', doc(db, Path.station, station)));
+    if (stationId) {
+        constraints.push(where(
+            'station',
+            '==',
+            doc(db, Path.station, stationId)
+        ));
+    }
     return query(collection(db, Path.vehicle), ...constraints).withConverter(converter);
+}
+
+export const setVehicle = (db: Firestore, vehicle: Partial<Vehicle>, id?: string) => {
+    const document = id
+        ? doc(db, Path.vehicle, id)
+        : doc(collection(db, Path.vehicle));
+        
+    return setDoc(document.withConverter(converter), vehicle).then(() => document.id);
 }

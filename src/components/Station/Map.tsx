@@ -1,88 +1,123 @@
 import React from 'react';
 import { defaultRegion } from '../../config';
 import { useGoogleMapContext } from '../../contexts/GoogleMap';
+import { useStationContext } from '../../contexts/Station';
 import { style } from '../../utils/map/style';
 
-const StationMap = React.memo(() => {
-    const { googleMaps } = useGoogleMapContext();
+interface Props {
+    selectStation: (id?: string) => void;
+    // hideStation: () => void;
+}
 
+const StationMap = React.memo<Props>(({
+    selectStation,
+}) => {
+    const { googleMaps } = useGoogleMapContext();
+    const { setLocation, stations } = useStationContext();
+    // console.log('map');
+    // console.log('stations', stations, vehicles);
+
+    const [ map, setMap ] = React.useState<google.maps.Map>();
     const mapRef = React.useRef<HTMLDivElement>(null);
 
-    const mapInstance = React.useMemo(() => {
-        // const station = id ? getStation(db, id) : null;
-        // let isChanged: boolean;
-
-        return googleMaps.then(({ Map, Marker, LatLng }) => {
+    React.useEffect(() => {
+        googleMaps.then(({ Map, Marker, LatLng, Point }) => {
             if (!mapRef.current) return;
-            const zoom = 15;
+
             const { latitude, longitude } = defaultRegion;
             const center = new LatLng(latitude, longitude);
 
-            const map = new Map(
-                mapRef.current,
-                {
-                    center,
-                    zoom: 4,
-                    disableDefaultUI: true,
-                    styles: style,
-                    keyboardShortcuts: false,
-                    backgroundColor: '#000'
-                }
-            );
+            const map = new Map(mapRef.current, {
+                center,
+                zoom: 14,
+                // zoom: 6,
+                // minZoom: 4,
+                disableDefaultUI: true,
+                styles: style,
+                keyboardShortcuts: false,
+                backgroundColor: 'transparent',
+                // gestureHandling: 'cooperative',
+                // restriction: {
+                //     latLngBounds: {
+                //         north: 22,
+                //         south: 5,
+                //         west: 95,
+                //         east: 107,
+                //     },
+                // }
+            });
 
-            // const marker = new Marker({ map });
+            map.addListener('click', () => {
+                selectStation();
+            })
 
-            // const mark = () => {
-            //     if (!isChanged) return isChanged = true;
-            //     const position = map.getCenter()?.toJSON()!;
-            //     marker.setPosition(position);
-            //     setLocation(new GeoPoint(position.lat, position.lng));
-            //     setLocated(false);
-            // };
+            map.addListener('idle', () => {
+                const center = map.getCenter();
+                if (!center) return;
+                setLocation([center.lat(), center.lng()]);
+            });
 
-            // map.addListener('center_changed', mark);
-            // map.addListener('zoom_changed', mark);
+            setMap(map);
 
-            // const locate = async () => {
-            //     const { coords } = await Geolocation.getCurrentPosition();
-            //     const center = new LatLng(coords.latitude, coords.longitude);
-            //     map.moveCamera({ center, zoom });
-            //     marker.setPosition(center);
-            // }
-
-            // if (station) {
-            //     station.then(documentSnapshot => {
-            //         const { name, location, address } = documentSnapshot.data()!;
-            //         const { latitude, longitude } = location;
-            //         const center = new LatLng(latitude, longitude);
-
-            //         setValue('name', name);
-            //         setValue('address', address);
-
-            //         map.moveCamera({ center, zoom });
-            //         marker.setPosition(center);
-            //     });
-            // } else {
-            //     window.fetch('https://ipapi.co/json/', { cache: 'force-cache' }).then(response => {
-            //         response.json().then(({ latitude, longitude }: IPRegion) => {
-            //             if (!latitude || !longitude || location !== defaultRegion) return;
-            //             map.setCenter(new LatLng(latitude, longitude));
-            //         });
-            //     });
-            // }
-
-            // return {
-            //     locate,
-            // };
+            // new Marker().setValues()
         });
     }, [mapRef]);
 
+    // const markers = 
+
+    // const [ markers, setMarkers ] = React.useState<Record<string, google.maps.Marker>>({});
+
+    const markers = React.useRef<Record<string, google.maps.Marker>>({});
+
+    React.useEffect(() => {
+        if (!map || !stations) return;
+
+        console.log('markers', markers.current);
+        
+        for (const id in markers.current) {
+            if (stations[id]) continue;
+            console.log('delete marker', id)
+            markers.current[id].setMap(null);
+            delete markers.current[id];
+        }
+
+        googleMaps.then(({ LatLng, Marker }) => {
+            for (const id in stations) {
+                const { location } = stations[id];
+                const position = new LatLng(location.latitude, location.longitude);
+                const marker = markers.current[id];
+
+                if (!marker) {
+                    const newMarker = new Marker({
+                        map,
+                        position,
+                    });
+                    newMarker.addListener('click', () => selectStation(id));
+                    markers.current[id] = newMarker;
+                    continue;
+                }
+
+                if (!marker.getPosition()?.equals(position)) {
+                    marker.setPosition(position);
+                }
+            }
+        });
+    }, [map, stations]);
+
     return (
-        <div ref={mapRef} style={{
-            width: '100%',
-            height: '100%'
-        }} />
+        <div
+            ref={mapRef}
+            role="application"
+            style={{
+                width: '100%',
+                height: '100%'
+            }}
+        />
     )
 });
 
-export default StationMap;
+StationMap.displayName = 'StationMap';
+
+export {
+    StationMap
+};

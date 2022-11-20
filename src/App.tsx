@@ -3,17 +3,26 @@ import React from 'react';
 import { Redirect, Route } from 'react-router-dom';
 import {
     IonApp,
+    IonContent,
+    IonFooter,
+    IonHeader,
     IonIcon,
+    IonItem,
     IonLabel,
+    IonList,
+    IonMenu,
+    IonNote,
     IonRouterOutlet,
     IonSplitPane,
     IonTabBar,
     IonTabButton,
     IonTabs,
+    IonTitle,
+    IonToolbar,
     setupIonicReact
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { person, flag, key, bicycleOutline } from 'ionicons/icons';
+import { person, flag, key, bicycleOutline, storefrontOutline, timeOutline, helpBuoy, helpBuoyOutline, helpCircleOutline, flagOutline, personOutline } from 'ionicons/icons';
 
 import AuthenticationProvider from './contexts/Authentication';
 import FirebaseProvider from './contexts/Firebase';
@@ -43,6 +52,8 @@ import './theme/variables.css';
 import GoogleMapProvider from './contexts/GoogleMap';
 import HostRoute from './pages/Host/Router';
 import RentRoute from './pages/Rent/Router';
+import StationProvider from './contexts/Station';
+import { Path } from './pages/path';
 
 // dotenv.config();
 
@@ -50,26 +61,88 @@ setupIonicReact({
     scrollAssist: false,
 });
 
-const App: React.FC = () => (
-    <FirebaseProvider>
-        <GoogleMapProvider>
-            <AuthenticationProvider>
-                <IonApp>
-                    <IonReactRouter>
-                        <IonSplitPane contentId="main">
-                            <IonRouterOutlet id="main">
-                                <Route exact path="/">
-                                    <Redirect to="/rent" />
-                                </Route>
-                                <Route path="/host" component={HostRoute} />
-                                <Route path="/rent" component={RentRoute} />
-                            </IonRouterOutlet>
-                        </IonSplitPane>
-                    </IonReactRouter>
-                </IonApp>
-            </AuthenticationProvider>
-        </GoogleMapProvider>
-    </FirebaseProvider>
-);
+const App: React.FC = () => {
+
+    const [useStationContext, setStationContext] = React.useState(true);
+
+    React.useEffect(() => {
+        // setTimeout(() => setStationContext(false), 2000);
+    });
+
+    const app = (
+        <IonApp>
+            <IonReactRouter>
+                <IonSplitPane contentId="main">
+                    <IonMenu contentId="main">
+                        <IonHeader>
+                            <IonToolbar>
+                                <IonTitle>User Menu</IonTitle>
+                            </IonToolbar>
+                        </IonHeader>
+                        <IonContent fullscreen={true}>
+                            <IonList className="ion-margin-bottom">
+                                <IonItem lines="none">
+                                    <IonIcon icon={personOutline} slot="start" />
+                                    <IonLabel>Account</IonLabel>
+                                    <IonNote>Sign in</IonNote>
+                                </IonItem>
+                            </IonList>
+                            <IonList>
+                                <IonItem>
+                                    <IonIcon icon={timeOutline} slot="start" />
+                                    <IonLabel>History</IonLabel>
+                                </IonItem>
+                                <IonItem>
+                                    <IonIcon icon={helpCircleOutline} slot="start" />
+                                    <IonLabel>Help</IonLabel>
+                                </IonItem>
+                            </IonList>
+                        </IonContent>
+                        <IonFooter className='ion-margin-bottom'>
+
+                            <IonList>
+                                <IonItem routerLink={`/${Path.host}`} lines="none" >
+                                    <IonIcon icon={flagOutline} slot="start" />
+                                    <IonLabel>Host</IonLabel>
+                                </IonItem>
+                            </IonList>
+                        </IonFooter>
+                    </IonMenu>
+                    <IonRouterOutlet id="main">
+                        <Route exact path="/">
+                            <Redirect to="/rent" />
+                        </Route>
+                        <Route path="/host" component={HostRoute} />
+                        <Route path="/rent" component={RentRoute} />
+                    </IonRouterOutlet>
+                </IonSplitPane>
+            </IonReactRouter>
+        </IonApp>
+    );
+
+    if (useStationContext) {
+        return (
+            <FirebaseProvider>
+                <GoogleMapProvider>
+                    <AuthenticationProvider>
+                        <StationProvider>
+                            {app}
+                        </StationProvider>
+                    </AuthenticationProvider>
+                </GoogleMapProvider>
+            </FirebaseProvider>
+        );
+    }
+
+    return (
+        <FirebaseProvider>
+            <GoogleMapProvider>
+                <AuthenticationProvider>
+                    {app};
+                </AuthenticationProvider>
+            </GoogleMapProvider>
+        </FirebaseProvider>
+    );
+};
 
 export default App;

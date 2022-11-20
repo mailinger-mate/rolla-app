@@ -1,5 +1,5 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
-import VehicleConnection from '../components/Vehicle/Connection';
+import { VehicleConnection } from '../components/Vehicle/Connection';
 
 const Tab1: React.FC = () => {
   return (

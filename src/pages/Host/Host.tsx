@@ -1,4 +1,4 @@
-import { IonContent, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonNote, IonPage, IonProgressBar, IonTitle, IonToolbar } from '@ionic/react';
+import { IonContent, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonNote, IonPage, IonProgressBar, IonRouterLink, IonTitle, IonToolbar } from '@ionic/react';
 import { alertCircleOutline, bicycleOutline, cloudOfflineOutline, globeOutline, keyOutline, peopleOutline, starHalf, storefrontOutline, walletOutline } from 'ionicons/icons';
 import { RouteComponentProps } from 'react-router';
 import { Path } from '../path';
@@ -72,6 +72,7 @@ const Host: React.FC<RouteComponentProps> = ({ match }) => {
                         <IonLabel>Domain</IonLabel>
                     </IonItem>
                 </IonList>
+                {/* <IonRouterLink routerLink='/rent'>Rent</IonRouterLink> */}
             </IonContent>
         </IonPage >
     );

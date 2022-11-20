@@ -2,12 +2,14 @@ import React from 'react';
 // import { FirebaseAuthentication, User } from '@capacitor-firebase/authentication';
 import { FirebaseError } from 'firebase/app';
 import {
+    initializeAuth,
     getAuth,
     signOut,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     AuthErrorCodes,
     User,
+    indexedDBLocalPersistence,
 } from 'firebase/auth';
 import { useFirebaseContext } from './Firebase';
 
@@ -27,7 +29,9 @@ export const useAuthenticationContext = () => React.useContext(AuthenticationCon
 
 const AuthenticationProvider: React.FC = (props) => {
     const { app } = useFirebaseContext();
-    const [ auth ] = React.useState(getAuth(app))
+    const [ auth ] = React.useState(initializeAuth(app, {
+        persistence: indexedDBLocalPersistence,
+    }))
     const [ user, setUser ] = React.useState<User | null>(auth.currentUser);
 
     const signUp = (

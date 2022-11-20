@@ -2,6 +2,7 @@ import React from 'react';
 import { CreateAnimation, IonButton, IonCol, IonFab, IonFabButton, IonGrid, IonIcon, IonImg, IonInput, IonItem, IonLabel, IonList, IonNote, IonRow, IonTextarea, useIonViewWillEnter } from '@ionic/react';
 import { add, locateOutline } from 'ionicons/icons';
 import { Geolocation } from '@capacitor/geolocation';
+import { geohashForLocation } from 'geofire-common';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { getStation, setStation } from '../../utils/db/station';
 import { style } from '../../utils/map/style';
@@ -69,11 +70,13 @@ const StationEdit = React.memo<Props>(({ id }) => {
     const onSubmit: SubmitHandler<Form> = ({ name, address }) => {
         // console.log('state', formState.errors, formState.dirtyFields);
         console.log(name, address, location);
+        const geohash = geohashForLocation([location.latitude, location.longitude]);
         setStation(db, {
             name,
             address,
             location,
-        }).then(id => {
+            geohash,
+        }, id).then(id => {
             history.push(`/${APath.host}/${APath.station}`)
         })
     }
