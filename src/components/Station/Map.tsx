@@ -1,30 +1,56 @@
 import React from 'react';
 import { defaultRegion } from '../../config';
 import { useGoogleMapContext } from '../../contexts/GoogleMap';
+import { useLocationContext } from '../../contexts/Location';
 import { useStationContext } from '../../contexts/Station';
+import { useVehicleContext } from '../../contexts/Vehicle';
+import { Vehicle } from '../../utils/db/vehicle';
 import { style } from '../../utils/map/style';
 
 interface Props {
-    selectStation: (id?: string) => void;
+    center?: string[];
+    padding?: number;
+    onBlur?: () => void;
+    onClick?: () => void;
+    onFocus?: (id?: string) => void;
     // hideStation: () => void;
 }
 
+const vehicleCount = (
+    vehicles?: Record<string, Vehicle>,
+    stationId?: string,
+) => {
+    if (!vehicles || !stationId) return;
+    return Object.keys(vehicles).reduce((label, vehicleId) => {
+        if (vehicles[vehicleId].station.id == stationId) label += 1;
+        return label;
+    }, 0).toString();
+}
+
 const StationMap = React.memo<Props>(({
-    selectStation,
+    center,
+    padding,
+    onBlur,
+    onClick,
+    onFocus,
 }) => {
+    const { location, setLocation } = useLocationContext();
     const { googleMaps } = useGoogleMapContext();
-    const { setLocation, stations } = useStationContext();
+    const { stations } = useStationContext();
+    const { vehicles } = useVehicleContext();
     // console.log('map');
     // console.log('stations', stations, vehicles);
 
     const [ map, setMap ] = React.useState<google.maps.Map>();
     const mapRef = React.useRef<HTMLDivElement>(null);
 
+    const [focus, setFocus] = React.useState<'position' | string>();
+
     React.useEffect(() => {
         googleMaps.then(({ Map, Marker, LatLng, Point }) => {
             if (!mapRef.current) return;
 
-            const { latitude, longitude } = defaultRegion;
+            const [latitude, longitude] = location || defaultRegion;
             const center = new LatLng(latitude, longitude);
 
             const map = new Map(mapRef.current, {
@@ -48,14 +74,23 @@ const StationMap = React.memo<Props>(({
             });
 
             map.addListener('click', () => {
-                selectStation();
+                // onFocus && onFocus();
+                console.log('click');
+                onClick && onClick();
             })
 
             map.addListener('idle', () => {
                 const center = map.getCenter();
                 if (!center) return;
+                console.log('idle');
                 setLocation([center.lat(), center.lng()]);
+                setFocus(undefined);
             });
+
+            // map.addListener('center_changed', () => {
+            //     console.log('center cahnged');
+            //     onBlur && onBlur();
+            // })
 
             setMap(map);
 
@@ -74,26 +109,48 @@ const StationMap = React.memo<Props>(({
 
         console.log('markers', markers.current);
         
-        for (const id in markers.current) {
-            if (stations[id]) continue;
-            console.log('delete marker', id)
-            markers.current[id].setMap(null);
-            delete markers.current[id];
+        for (const stationId in markers.current) {
+            const marker = markers.current[stationId];
+            if (stations[stationId]) {
+                if (marker.getMap() !== map) {
+                    marker.setMap(map);
+                }
+                if (vehicles) {
+                    const label = vehicleCount(vehicles, stationId);
+                    if (marker.getLabel() !== label) marker.setLabel(label);
+                }
+                continue;
+            }
+            console.log('delete marker', stationId)
+            markers.current[stationId].setMap(null);
+            delete markers.current[stationId];
         }
 
-        googleMaps.then(({ LatLng, Marker }) => {
-            for (const id in stations) {
-                const { location } = stations[id];
+        googleMaps.then(({ LatLng, LatLngBounds, Marker, Animation }) => {
+            const bounds = new LatLngBounds();
+
+            for (const stationId in stations) {
+                const { location } = stations[stationId];
                 const position = new LatLng(location.latitude, location.longitude);
-                const marker = markers.current[id];
+                const marker = markers.current[stationId];
+
+                bounds.extend(position);
 
                 if (!marker) {
+                    const label = vehicleCount(vehicles, stationId);
                     const newMarker = new Marker({
                         map,
                         position,
+                        label,
+                        animation: Animation.DROP,
                     });
-                    newMarker.addListener('click', () => selectStation(id));
-                    markers.current[id] = newMarker;
+                    onFocus && newMarker.addListener('click', () => {
+                        map.setCenter(position);
+                        map.panBy(0, 100);
+                        setFocus(stationId);
+                        onFocus(stationId);
+                    });
+                    markers.current[stationId] = newMarker;
                     continue;
                 }
 
@@ -101,8 +158,58 @@ const StationMap = React.memo<Props>(({
                     marker.setPosition(position);
                 }
             }
+
+            if (!bounds.isEmpty()) map.fitBounds(bounds, {
+                left: 50, top: 50, right: 50,
+                bottom: padding,
+            })
         });
-    }, [map, stations]);
+    }, [map, stations, vehicles]);
+
+    // React.useEffect(() => {
+    //     if (!map || !focus) return;
+    //     if (focus === 'bounds') {
+    //         googleMaps.then(({ LatLngBounds }) => {
+    //             const bounds = new LatLngBounds();
+    //             for (const stationId in markers.current) {
+    //                 const marker = markers.current[stationId];
+    //                 const position = marker.getPosition();
+    //                 if (position) bounds.extend(position);
+    //             }
+    //             if (!bounds.isEmpty()) {
+    //                 map.fitBounds(bounds, {
+    //                     bottom: padding,
+    //                 })
+    //             }
+    //         });
+    //     }
+    // }, [map, focus]);
+
+    React.useEffect(() => {
+        if (!map || !center || !center.length) return;
+        if (center.length === 1 && center[0] === focus) {
+            const marker = markers.current[center[0]];
+            const position = marker.getPosition();
+            if (position) {
+                map.panTo(position);
+                if (padding) map.panBy(0, padding);
+            }
+            return;
+        }
+        // googleMaps.then(({ LatLngBounds }) => {
+        //     const bounds = new LatLngBounds();
+        //     center.forEach(id => {
+        //         const marker = markers.current[id];
+        //         if (marker) {
+        //             const position = marker.getPosition();
+        //             if (position) bounds.extend(position);
+        //         }
+        //     });
+        //     if (!bounds.isEmpty()) map.fitBounds(bounds, {
+        //         bottom: padding,
+        //     })
+        // });
+    }, [map, focus, center, padding]);
 
     return (
         <div

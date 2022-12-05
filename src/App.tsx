@@ -52,8 +52,10 @@ import './theme/variables.css';
 import GoogleMapProvider from './contexts/GoogleMap';
 import HostRoute from './pages/Host/Router';
 import RentRoute from './pages/Rent/Router';
-import StationProvider from './contexts/Station';
+import { StationProvider } from './contexts/Station';
 import { Path } from './pages/path';
+import { LocationProvider } from './contexts/Location';
+import { VehicleProvider } from './contexts/Vehicle';
 
 // dotenv.config();
 
@@ -61,19 +63,12 @@ setupIonicReact({
     scrollAssist: false,
 });
 
-const App: React.FC = () => {
-
-    const [useStationContext, setStationContext] = React.useState(true);
-
-    React.useEffect(() => {
-        // setTimeout(() => setStationContext(false), 2000);
-    });
-
+const App = React.memo(() => {
     const app = (
         <IonApp>
             <IonReactRouter>
                 <IonSplitPane contentId="main">
-                    <IonMenu contentId="main">
+                    <IonMenu contentId="main" hidden={true}>
                         <IonHeader>
                             <IonToolbar>
                                 <IonTitle>User Menu</IonTitle>
@@ -120,29 +115,21 @@ const App: React.FC = () => {
         </IonApp>
     );
 
-    if (useStationContext) {
-        return (
-            <FirebaseProvider>
+    return (
+        <FirebaseProvider>
+            <LocationProvider>
                 <GoogleMapProvider>
                     <AuthenticationProvider>
                         <StationProvider>
-                            {app}
+                            <VehicleProvider>
+                                {app}
+                            </VehicleProvider>
                         </StationProvider>
                     </AuthenticationProvider>
                 </GoogleMapProvider>
-            </FirebaseProvider>
-        );
-    }
-
-    return (
-        <FirebaseProvider>
-            <GoogleMapProvider>
-                <AuthenticationProvider>
-                    {app};
-                </AuthenticationProvider>
-            </GoogleMapProvider>
+            </LocationProvider>
         </FirebaseProvider>
     );
-};
+});
 
 export default App;

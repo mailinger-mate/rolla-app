@@ -39,7 +39,7 @@ const converter = {
 };
 
 export const getStation = (db: Firestore, id: string) => {
-    return getDoc(doc(db, Path.station, id).withConverter(converter));
+    return doc(db, Path.station, id).withConverter(converter);
 }
 
 export const getStations = (db: Firestore) => {

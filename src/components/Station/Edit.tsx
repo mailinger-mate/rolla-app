@@ -83,7 +83,7 @@ const StationEdit = React.memo<Props>(({ id }) => {
     // console.log('router', routerLink)
 
     const mapInstance = React.useMemo(() => {
-        const station = id ? getStation(db, id) : null;
+        const station = null; // id ? getStation(db, id) : null;
         let isChanged: boolean;
 
         return googleMaps.then(({ Map, Marker, LatLng }) => {
@@ -124,19 +124,20 @@ const StationEdit = React.memo<Props>(({ id }) => {
                 marker.setPosition(center);
             }
 
-            if (station) {
-                station.then(documentSnapshot => {
-                    const { name, location, address } = documentSnapshot.data()!;
-                    const { latitude, longitude } = location;
-                    const center = new LatLng(latitude, longitude);
+            if (false) {
+                // station.then(documentSnapshot => {
+                //     const { name, location, address } = documentSnapshot.data()!;
+                //     const { latitude, longitude } = location;
+                //     const center = new LatLng(latitude, longitude);
 
-                    setValue('name', name);
-                    setValue('address', address);
+                //     setValue('name', name);
+                //     setValue('address', address);
 
-                    map.moveCamera({ center, zoom });
-                    marker.setPosition(center);
-                });
-            } else {
+                //     map.moveCamera({ center, zoom });
+                //     marker.setPosition(center);
+                // });
+            }
+            else {
                 window.fetch('https://ipapi.co/json/', { cache: 'force-cache' }).then(response => {
                     response.json().then(({ latitude, longitude }: IPRegion) => {
                         if (!latitude || !longitude || location !== defaultRegion) return;
