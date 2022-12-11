@@ -59,7 +59,7 @@ const StationList = React.memo<Props>(({
                 >
                     <IonItem
                         routerLink={routerLink && `${routerLink}/${document.id}`}
-                        onSelect={onSelect ? () => onSelect(document) : undefined}
+                        onClick={() => onSelect && onSelect(document)}
                         detail={routerLink ? true : false}
                     >
                         <IonIcon icon={flashOffOutline} size="small" slot="end"></IonIcon>

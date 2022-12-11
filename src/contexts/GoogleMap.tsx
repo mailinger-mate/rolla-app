@@ -1,30 +1,28 @@
 import React from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 
-export type GoogleMaps = typeof google.maps;
-
-interface Context {
-    googleMaps: Promise<GoogleMaps>;
-}
-
-const googleMaps = new Loader({
+const loader = new Loader({
     apiKey: process.env.REACT_APP_GOOGLE_API_KEY!,
     version: "weekly",
 }).load().then(google => google.maps);
 
-const GoogleMapContext = React.createContext<Context>({
-    googleMaps,
-});
+const GoogleMapContext = React.createContext<typeof google.maps | undefined>(undefined);
 
 export const useGoogleMapContext = () => React.useContext(GoogleMapContext);
 
-const GoogleMapProvider: React.FC = (props) => {
+const GoogleMapProvider = React.memo(({ children }) => {
+    const [context, setContext] = React.useState<typeof google.maps | undefined>();
+
+    React.useEffect(() => {
+        loader.then(googleMaps => setContext(googleMaps));
+    }, []);
+
     return (
-        <GoogleMapContext.Provider value={{ googleMaps }}>
-            {props.children}
+        <GoogleMapContext.Provider value={context}>
+            {children}
         </GoogleMapContext.Provider>
     );
 
-};
+});
 
 export default GoogleMapProvider;

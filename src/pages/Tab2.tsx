@@ -1,5 +1,5 @@
 import { IonContent, IonHeader, IonInput, IonPage, IonTitle, IonToolbar } from '@ionic/react';
-import UserAuthentication from '../components/UserAuthentication';
+import { UserAuthentication } from '../components/UserAuthentication';
 import './Tab2.css';
 
 const Tab2: React.FC = () => {

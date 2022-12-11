@@ -3,6 +3,7 @@ import React from 'react';
 import { Redirect, Route } from 'react-router-dom';
 import {
     IonApp,
+    IonBadge,
     IonContent,
     IonFooter,
     IonHeader,
@@ -10,7 +11,9 @@ import {
     IonItem,
     IonLabel,
     IonList,
+    IonListHeader,
     IonMenu,
+    IonMenuToggle,
     IonNote,
     IonRouterOutlet,
     IonSplitPane,
@@ -22,9 +25,9 @@ import {
     setupIonicReact
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { person, flag, key, bicycleOutline, storefrontOutline, timeOutline, helpBuoy, helpBuoyOutline, helpCircleOutline, flagOutline, personOutline } from 'ionicons/icons';
+import { person, flag, key, bicycleOutline, storefrontOutline, timeOutline, helpBuoy, helpBuoyOutline, helpCircleOutline, flagOutline, personOutline, mapOutline, exitOutline, enterOutline } from 'ionicons/icons';
 
-import AuthenticationProvider from './contexts/Authentication';
+import AuthenticationProvider, { useAuthenticationContext } from './contexts/Authentication';
 import FirebaseProvider from './contexts/Firebase';
 
 import Tab1 from './pages/Tab1';
@@ -56,6 +59,9 @@ import { StationProvider } from './contexts/Station';
 import { Path } from './pages/path';
 import { LocationProvider } from './contexts/Location';
 import { VehicleProvider } from './contexts/Vehicle';
+import { AgentProvider } from './contexts/Agent';
+import ContractProvider from './contexts/Contract';
+import { StorageProvider } from './contexts/Storage';
 
 // dotenv.config();
 
@@ -64,11 +70,12 @@ setupIonicReact({
 });
 
 const App = React.memo(() => {
-    const app = (
+    const { signIn, signOut, user } = useAuthenticationContext();
+    return (
         <IonApp>
             <IonReactRouter>
                 <IonSplitPane contentId="main">
-                    <IonMenu contentId="main" hidden={true}>
+                    <IonMenu contentId="main">
                         <IonHeader>
                             <IonToolbar>
                                 <IonTitle>User Menu</IonTitle>
@@ -76,17 +83,35 @@ const App = React.memo(() => {
                         </IonHeader>
                         <IonContent fullscreen={true}>
                             <IonList className="ion-margin-bottom">
-                                <IonItem lines="none">
-                                    <IonIcon icon={personOutline} slot="start" />
-                                    <IonLabel>Account</IonLabel>
-                                    <IonNote>Sign in</IonNote>
-                                </IonItem>
+                                <IonListHeader>Account</IonListHeader>
+                                {user && <IonMenuToggle>
+                                    <IonItem onClick={signOut} button={true} lines="none">
+                                        <IonIcon icon={personOutline} slot="start" />
+                                        <IonLabel>{user.email}</IonLabel>
+                                        {/* <IonNote>Sign in</IonNote> */}
+                                    </IonItem>
+                                </IonMenuToggle>}
+                                <IonMenuToggle>
+                                    <IonItem onClick={user ? signOut : signIn} button={true} lines="none">
+                                        <IonIcon icon={user ? exitOutline : enterOutline} slot="start" />
+                                        <IonLabel>Sign {user ? 'Out' : 'In'}</IonLabel>
+                                    </IonItem>
+                                </IonMenuToggle>
                             </IonList>
                             <IonList>
-                                <IonItem>
-                                    <IonIcon icon={timeOutline} slot="start" />
-                                    <IonLabel>History</IonLabel>
-                                </IonItem>
+                                <IonMenuToggle>
+                                    <IonItem routerLink='/rent/map' button={true}>
+                                        <IonIcon icon={mapOutline} slot="start" />
+                                        <IonLabel>Map</IonLabel>
+                                    </IonItem>
+                                </IonMenuToggle>
+                                <IonMenuToggle>
+                                    <IonItem routerLink='/rent/activity' button={true}>
+                                        <IonIcon icon={timeOutline} slot="start" />
+                                        <IonLabel>Activity</IonLabel>
+                                        <IonBadge slot="end" color="primary">1</IonBadge>
+                                    </IonItem>
+                                </IonMenuToggle>
                                 <IonItem>
                                     <IonIcon icon={helpCircleOutline} slot="start" />
                                     <IonLabel>Help</IonLabel>
@@ -114,17 +139,25 @@ const App = React.memo(() => {
             </IonReactRouter>
         </IonApp>
     );
+});
 
+const AppWithContext = React.memo(() => {
     return (
         <FirebaseProvider>
             <LocationProvider>
                 <GoogleMapProvider>
                     <AuthenticationProvider>
-                        <StationProvider>
-                            <VehicleProvider>
-                                {app}
-                            </VehicleProvider>
-                        </StationProvider>
+                        <ContractProvider>
+                            <StationProvider>
+                                <VehicleProvider>
+                                    <StorageProvider>
+                                        <AgentProvider>
+                                            <App />
+                                        </AgentProvider>
+                                    </StorageProvider>
+                                </VehicleProvider>
+                            </StationProvider>
+                        </ContractProvider>
                     </AuthenticationProvider>
                 </GoogleMapProvider>
             </LocationProvider>
@@ -132,4 +165,4 @@ const App = React.memo(() => {
     );
 });
 
-export default App;
+export default AppWithContext;

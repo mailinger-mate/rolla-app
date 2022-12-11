@@ -2,8 +2,8 @@ import React from 'react';
 import { IonButton, IonInput, IonItem, IonLabel, IonList } from '@ionic/react';
 import { useAuthenticationContext } from '../contexts/Authentication';
 
-const UserAuthentication: React.FC = () => {
-    const { user, signInWithEmailAndPassword, signOut } = useAuthenticationContext();
+const UserAuthentication = React.memo(() => {
+    const { user, signOut } = useAuthenticationContext();
     const [ email, setEmail ] = React.useState<string | null | undefined>(user?.email);
     const [ password, setPassword ] = React.useState<string | undefined>();
 
@@ -21,13 +21,13 @@ const UserAuthentication: React.FC = () => {
 
     const signIn = React.useCallback( () => {
         if (!email || !password) return;
-        signInWithEmailAndPassword(email, password);
+        // signInWithEmailAndPassword(email, password);
     }, [email, password]);
 
     return (
         <IonList>
             <IonItem>
-                <IonLabel position="floating">Email</IonLabel>
+                <IonLabel>Email</IonLabel>
                 <IonInput
                     type="email"
                     required={true}
@@ -39,7 +39,7 @@ const UserAuthentication: React.FC = () => {
             {user
                 ? (<>
                     {/* <IonItem>
-                        <IonLabel position="floating">New Password</IonLabel>
+                        <IonLabel>New Password</IonLabel>
                         <IonInput
                             type="password"
                             value={newPassword}
@@ -47,7 +47,7 @@ const UserAuthentication: React.FC = () => {
                         />
                     </IonItem>
                     <IonItem>
-                        <IonLabel position="floating">Confirm Password</IonLabel>
+                        <IonLabel>Confirm Password</IonLabel>
                         <IonInput
                             type="password"
                             value={confirmPassword}
@@ -71,7 +71,7 @@ const UserAuthentication: React.FC = () => {
                 </>)
                 : (<>
                     <IonItem>
-                        <IonLabel position="floating">Password</IonLabel>
+                        <IonLabel>Password</IonLabel>
                         <IonInput
                             type="password"
                             value={password}
@@ -89,6 +89,6 @@ const UserAuthentication: React.FC = () => {
             }
         </IonList>
     )
-}
+})
 
-export default UserAuthentication;
+export { UserAuthentication };

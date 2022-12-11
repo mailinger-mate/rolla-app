@@ -1,3 +1,12 @@
 ion-fab-button {
     --border-radius: 5px;
 }
+
+/* ion-toolbar ion-searchbar.sc-ion-searchbar-ios-h {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+ion-toolbar ion-buttons.sc-ion-buttons-ios-h {
+    align-self: center;
+} */

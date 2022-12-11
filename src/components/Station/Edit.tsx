@@ -58,7 +58,7 @@ const StationEdit = React.memo<Props>(({ id }) => {
     const { db } = useFirebaseContext();
     const history = useHistory();
 
-    const { googleMaps } = useGoogleMapContext();
+    const googleMap = useGoogleMapContext();
     const { handleSubmit, setValue, register, formState } = useForm<Form>();
 
     const [location, setLocation] = React.useState(defaultRegion);
@@ -83,11 +83,12 @@ const StationEdit = React.memo<Props>(({ id }) => {
     // console.log('router', routerLink)
 
     const mapInstance = React.useMemo(() => {
+        if (!mapRef.current || !googleMap) return;
         const station = null; // id ? getStation(db, id) : null;
         let isChanged: boolean;
 
-        return googleMaps.then(({ Map, Marker, LatLng }) => {
-            if (!mapRef.current) return;
+        const { Map, Marker, LatLng } = googleMap;
+            // if (!mapRef.current) return;
             const zoom = 15;
             const { latitude, longitude } = defaultRegion;
             const center = station && new LatLng(latitude, longitude);
@@ -146,24 +147,28 @@ const StationEdit = React.memo<Props>(({ id }) => {
                 });
             }
 
-            return {
-                locate,
-            };
-        });
-    }, [mapRef]);
+            // return {
+            //     locate,
+            // };
+            return map;
+        // });
+    }, [googleMap, mapRef]);
 
-    const locate = React.useCallback(async () => {
-        const animation = locationRef.current?.animation;
-        animation?.play();
-        await mapInstance
-            .then(map => map?.locate())
-            .then(() => setLocated(true))
-            .finally(() => animation?.stop());
-    }, [mapInstance, locationRef]);
+    // const locate = React.useCallback(async () => {
+    //     const animation = locationRef.current?.animation;
+    //     animation?.play();
+    //     await mapInstance
+    //         .then(map => map?.locate())
+    //         .then(() => setLocated(true))
+    //         .finally(() => animation?.stop());
+    // }, [mapInstance, locationRef]);
 
     const locateButton = React.useMemo(() => {
         return (
-            <IonFabButton color={isLocated ? 'light' : 'dark'} onClick={locate}>
+            <IonFabButton
+                color={isLocated ? 'light' : 'dark'}
+                // onClick={locate}
+            >
                 <CreateAnimation
                     ref={locationRef}
                     duration={1000}

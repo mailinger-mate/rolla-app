@@ -1,20 +1,23 @@
 import { IonRouterOutlet } from '@ionic/react';
 import { Redirect, Route, RouteComponentProps } from 'react-router';
 import { Path } from '../path';
+import { ActivityPage } from './Activity';
 import MapPage from './Map';
 
 const RentRoute: React.FC<RouteComponentProps> = ({ match }) => {
     const mapPath = match.url + '/' + Path.map;
+    const activityPath = match.url + '/' + Path.acitvity;
     // const vehicle = match.url + '/' + Path.vehicle;
     return (
         // <IonPage>
 
         <IonRouterOutlet>
-        <Route path={mapPath} exact component={MapPage} />
-        <Route path={match.url} exact>
-            <Redirect to={mapPath} />
-        </Route>
-    </IonRouterOutlet>
+            <Route path={mapPath} exact component={MapPage} />
+            <Route path={activityPath} component={ActivityPage} />
+            <Route path={match.url} exact>
+                <Redirect to={mapPath} />
+            </Route>
+        </IonRouterOutlet>
         // <IonTabs>
 
         //     <IonTabBar

@@ -15,6 +15,7 @@
     "@googlemaps/js-api-loader": "^1.14.3",
     "@ionic/react": "^6.3.9",
     "@ionic/react-router": "^6.3.9",
+    "@ionic/storage": "^3.0.6",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.6.3",

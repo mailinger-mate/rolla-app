@@ -2,8 +2,7 @@ import { doc, DocumentData, Firestore, getDoc, QueryDocumentSnapshot, SnapshotOp
 import { Path } from "./enums";
 import { getVehicle } from "./vehicle";
 
-
-interface Security {
+export interface Security {
     // id: string;
     accessKey: string;
     isEnabled: boolean;
@@ -30,6 +29,10 @@ const converter = {
     }
 };
 
+// export const getSecurity2 = (db: Firestore, vehicleId) => {
+    
+// }
+
 export const getSecurity = (db: Firestore, id: string) => {
     return doc(db, Path.security, id).withConverter(converter);
 }
@@ -37,7 +40,7 @@ export const getSecurity = (db: Firestore, id: string) => {
 export const getVehicleSecurity = (db: Firestore, vehicleId: string) => {
     return getDoc(getVehicle(db, vehicleId)).then(vehicle => {
         const { security } = vehicle.data()!;
-        return getDoc(doc(db, security.path).withConverter(converter));
+        return doc(db, security.path).withConverter(converter);
     });
 }
 

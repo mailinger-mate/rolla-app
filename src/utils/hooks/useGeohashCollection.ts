@@ -120,9 +120,9 @@ export const useGeohashCollection = <
 
         geohashRangesNear.forEach(geohashRange => {
             listeners.current.push({
-                unsubscribe: onSnapshot(query(db, geohashRange), document => {
+                unsubscribe: onSnapshot(query(db, geohashRange), query => {
                     setCollection(previousCollection =>
-                        appendCollection(document, previousCollection))
+                        appendCollection(query, previousCollection))
                 }),
                 geohashRange,
             });

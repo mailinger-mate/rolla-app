@@ -1,87 +1,61 @@
 import React from 'react';
-import { IonButton, IonButtons, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonContent, IonFab, IonFabButton, IonFooter, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonMenuToggle, IonModal, IonNote, IonPage, IonPopover, IonSearchbar, IonTabBar, IonTabButton, IonTabs, IonText, IonTitle, IonToolbar } from '@ionic/react';
+import { IonButton, IonButtons, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonContent, IonDatetime, IonDatetimeButton, IonFab, IonFabButton, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonModal, IonPage, IonSearchbar, IonTitle, IonToolbar } from '@ionic/react';
 import { RouteChildrenProps } from 'react-router';
-import { VehicleConnection } from '../../components/Vehicle/Connection';
-import { arrowRedo, call, key, keyOutline, navigateOutline, personCircleOutline, refresh } from 'ionicons/icons';
+import { arrowRedo, call, navigateOutline, searchOutline } from 'ionicons/icons';
 import { useStationContext } from '../../contexts/Station';
-import { StationMap } from '../../components/Station/Map';
+import { StationMap, View } from '../../components/Station/Map';
 import { useVehicleContext } from '../../contexts/Vehicle';
 
 import './Map.css';
 import { Vehicle } from '../../utils/db/vehicle';
+import { VehicleConnectButton } from '../../components/Vehicle/ConnectButton';
+import { PageHeader } from '../../components/Layout/PageHeader';
+import { ContractItem } from '../../components/Contract/Item';
+import { useContractContext } from '../../contexts/Contract';
+import { useAgentContext } from '../../contexts/Agent';
 
-interface ModalProps {
-    isOpen: boolean;
-    onDismiss: () => void;
-}
-
-const StationModal = React.memo<React.PropsWithChildren<ModalProps>>((({
-    children,
-    onDismiss,
-    isOpen,
-}) => {
-    // const ref = React.useRef<HTMLIonModalElement>(null);
-
-    return (
-        <IonModal
-            // ref={ref}
-            isOpen={isOpen}
-            initialBreakpoint={0.25}
-            breakpoints={[0, 0.25, 0.5, 0.75]}
-            backdropBreakpoint={0.5}
-            onIonModalDidDismiss={onDismiss}
-        >
-            {children}
-        </IonModal>
-    );
-}));
-
-StationModal.displayName = 'StationModal';
-
-const getPadding = (breakpoint: number) => {
-
+enum Breakpoint {
+    Station = 0.5,
+    StationMinimized = 0.1,
+    Search = 0.5,
 }
 
 const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
     const { stations } = useStationContext();
     const { vehicles } = useVehicleContext();
+    const { hasLease } = useContractContext();
+    const { select: select } = useAgentContext();
 
     const [stationId, setStationId] = React.useState<string>();
-    const [padding, setPadding] = React.useState<number>();
+    const [vehicleId, setVehicleId] = React.useState<string>('esper');
 
-    const selectStation = React.useCallback((id?: string) => {
-        console.log('selectStation', id)
-        if (!id) {
-            setStationId(undefined);
-            setStationOpen(false);
-            return;
-        }
+    const [padding, setPadding] = React.useState<number>();
+    const [center, setCenter] = React.useState<string[] | boolean>(true);
+    // const [filter, setFilter] = React.useState(false);
+
+    const [isStationOpen, setStationOpen] = React.useState(false);
+    const stationModalRef = React.useRef<HTMLIonModalElement>(null);
+
+    // React.useEffect(() => {
+    //     if (!stationId) return;
+    //     setCenter([stationId]);
+    // }, [stationId]);
+
+    const selectStation = (id: string) => {
+        if (!id) return;
+        console.log('selectStation', id);
         setStationId(id);
         setStationOpen(true);
-    }, []);
+        setSearchOpen(false);
+        stationModalRef.current?.setCurrentBreakpoint(0.5);
+        setCenter([id]);
+        setPadding(Breakpoint.Station);
+    };
 
-    const header = React.useMemo(() => (
-        <IonHeader
-        // translucent={true}
-        // style={{ position: 'absolute' }}
-        >
-            <IonToolbar>
-                <IonButtons slot="start">
-                    <IonMenuToggle>
-                        <IonButton>
-                            <IonIcon slot="icon-only" icon={personCircleOutline}></IonIcon>
-                        </IonButton>
-                    </IonMenuToggle>
-                </IonButtons>
-                <IonTitle>Rentals</IonTitle>
-                {/* <IonSearchbar
-                    placeholder="Rentals"
-                    animated={true}
-                    className="ion-no-padding"
-                /> */}
-            </IonToolbar>
-        </IonHeader>
-    ), []);
+    // const openStation = React.useCallback((breakpoint: Breakpoint) => {
+    //     // stationModalRef.current?.setCurrentBreakpoint(breakpoint);
+    //     setStationOpen(true);
+    // }, [stationModalRef]);
 
     const fabs = React.useMemo(() => (
         <IonFab
@@ -92,15 +66,13 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
             <IonFabButton color="medium" id="position" size="small">
                 <IonIcon icon={navigateOutline}></IonIcon>
             </IonFabButton>
-            <IonFabButton color="primary" id="ride" size="small">
-                <IonIcon icon={keyOutline}></IonIcon>
-            </IonFabButton>
+            <VehicleConnectButton />
         </IonFab>
     ), []);
 
     function reduceVehicles<Value>(
         stationId: string,
-        reducer: (value: Value, vehicle: Vehicle) => Value,
+        reducer: (value: Value, vehicle: Vehicle, vehicleId: string) => Value,
         initialValue: Value,
     ) {
         let value = initialValue;
@@ -108,17 +80,27 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
         for (const vehicleId in vehicles) {
             const vehicle = vehicles[vehicleId];
             if (vehicle.station.id == stationId) {
-                value = reducer(value, vehicle);
+                value = reducer(value, vehicle, vehicleId);
             }
         }
         return value;
     };
 
+    const selectVehicle = (vehicleId: string) => {
+        if (hasLease(vehicleId)) {
+            select();
+        }
+        else {
+            setVehicleId(vehicleId);
+            setContractOpen(true);
+        }
+    }
+
     const vehicleList = React.useMemo(() => {
         if (!vehicles || !stationId) return null;
-        return reduceVehicles<React.ReactNode[]>(stationId, (list, { name, model }) => {
+        return reduceVehicles<React.ReactNode[]>(stationId, (list, { name, model }, id) => {
             list.push((
-                <IonItem detail={true}>
+                <IonItem onClick={() => selectVehicle(id)} button={true} detail={true} key={id}>
                     <IonLabel>
                         {name}
                         <p>{model}</p>
@@ -142,10 +124,10 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
                         <IonCardSubtitle>{address}</IonCardSubtitle>
                     </IonCardHeader>
                     <IonCardContent>
-                        <IonButton>
+                        {/* <IonButton>
                             <IonIcon icon={key} slot="start" />
                             <IonLabel>Rent</IonLabel>
-                        </IonButton>
+                        </IonButton> */}
                         <IonButton color="light">
                             <IonIcon icon={arrowRedo} slot="start" />
                             <IonLabel>Navigate</IonLabel>
@@ -166,26 +148,33 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
         )
     }, [stations, stationId]);
 
-    const setBreakpointPadding = (breakpoint: Promise<number | undefined>) => {
-        breakpoint.then(value => {
-            setPadding(value && Math.round(value * document.body.clientHeight / 2))
-        });
-    }
 
-    const [isStationOpen, setStationOpen] = React.useState(false);
-    const stationModalRef = React.useRef<HTMLIonModalElement>(null);
+    // React.useEffect(() => {
+    //     if (!drag) return;
+    //     if (isStationOpen)
+    //     // stationModalRef.current?.setCurrentBreakpoint(0.15).then(() => setDrag(false))
+    // }, [drag, isStationOpen]);
+
+    const setBreakpointPadding = React.useCallback((event: Event) => {
+        // if (drag) return;
+        const target = event.target as HTMLIonModalElement;
+        if (target) target.getCurrentBreakpoint().then(breakpoint => {
+            if (breakpoint) setPadding(breakpoint);
+        });
+    }, []);
+
+
     const stationModal = React.useMemo(() => {
         return (
             <IonModal
                 ref={stationModalRef}
                 isOpen={isStationOpen}
-                initialBreakpoint={0.5}
-                breakpoints={[0, 0.25, 0.5, 0.75]}
-                backdropBreakpoint={0.5}
-                onIonModalDidDismiss={() => selectStation()}
-                onIonBreakpointDidChange={(event) => {
-                    setBreakpointPadding(event.target.getCurrentBreakpoint());
-                }}
+                initialBreakpoint={Breakpoint.Station}
+                breakpoints={[0, Breakpoint.StationMinimized, Breakpoint.Station, 0.75]}
+                backdropBreakpoint={Breakpoint.Station}
+                onIonModalDidDismiss={() => setStationId(undefined)}
+                onIonBreakpointDidChange={setBreakpointPadding}
+            // onIonModalDidPresent={setBreakpointPadding}
             >
                 {stationCard}
             </IonModal>
@@ -194,68 +183,107 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
 
     const searchModalRef = React.useRef<HTMLIonModalElement>(null);
 
-    const minimize = React.useCallback(() => {
-        console.log('minimize', stationId);
-        if (!stationId) return;
-        searchModalRef.current?.setCurrentBreakpoint(0.1);
-        stationModalRef.current?.setCurrentBreakpoint(0.25);
-    }, [stationId])
+    const [isStationMiminized, setStationMinimized] = React.useState(false);
 
-    const hide = () => {
+    const minimizeStation = React.useCallback(() => {
+        if (isStationMiminized) return;
+        setCenter(false);
+        searchModalRef.current?.dismiss();
+        stationModalRef.current?.getCurrentBreakpoint().then(breakpoint => {
+            if (breakpoint && breakpoint >= Breakpoint.Station) {
+                stationModalRef.current?.setCurrentBreakpoint(Breakpoint.StationMinimized);
+                setStationMinimized(true);
+            }
+        });
+    }, [isStationMiminized]);
+
+    const hideAll = () => {
         setStationOpen(false);
+        setSearchOpen(false);
     }
 
-    const stationList = React.useMemo(() => {
-        if (!stations) return null;
-        const list: React.ReactNode[] = [];
+    const [isSearchOpen, setSearchOpen] = React.useState(false);
+    const [search, setSearch] = React.useState<string>();
+    const searchBarRef = React.useRef<HTMLIonSearchbarElement>(null);
 
-        for (const id in stations) {
-            const { name, address } = stations[id];
-            const count = vehicles && reduceVehicles(id, count => count += 1, 0);
+    const stationList = React.useMemo(() => {
+        if (!stations || !isSearchOpen) return null;
+        const list: React.ReactNode[] = [];
+        const filter: string[] = [];
+
+        for (const stationId in stations) {
+            const { name, address } = stations[stationId];
+            if (search
+                && !name.toLowerCase().includes(search)
+                && !address.toLowerCase().includes(search)) continue;
+
+            const count = vehicles && reduceVehicles(stationId, count => count += 1, 0);
             const onClick = () => {
-                minimize();
-                selectStation(id);
+                setSearchOpen(false);
+                // minimize();
+                selectStation(stationId);
             };
 
+            filter.push(stationId);
             list.push((
-                <IonItem onClick={onClick}>
+                <IonItem onClick={onClick} key={stationId}>
                     <IonLabel>
                         {name}
                         <p>{address}</p>
                     </IonLabel>
                     <IonLabel slot="end" color="medium">{count}</IonLabel>
                 </IonItem>
-            ))
+            ));
+        }
+        if (filter.length) {
+            setCenter(filter);
+            // setFilter(true);
         }
         return list;
-    }, [stations, vehicles]);
+    }, [stations, vehicles, search, isSearchOpen]);
+
+    const startSearch = () => {
+        // setBreakpointPadding(event);
+        setStationOpen(false);
+        setSearchOpen(true);
+        setCenter(true);
+        setPadding(Breakpoint.Search);
+        searchBarRef.current?.querySelector('input')?.focus();
+    }
+
+    const changeSearch = (event: Event) => {
+        const target = event.target as HTMLIonSearchbarElement;
+        if (target) setSearch(target.value!.toLowerCase());
+    }
+
+    const cancelSearch = () => {
+        setSearch(undefined);
+        setSearchOpen(false);
+    }
 
     const searchModal = React.useMemo(() => {
         return (
             <IonModal
                 ref={searchModalRef}
-                isOpen={true}
-                // onBlur={() => console.log('blur')}
-                // trigger="connect"
-                initialBreakpoint={0.1}
-                breakpoints={[0.1, 0.5]}
-                backdropBreakpoint={1}
-                backdropDismiss={false}
-                showBackdrop={false}
-            // onIonModalWillPresent={() => mainModalRef.current?.setAttribute('style', `--height: 100px`)}
+                isOpen={isSearchOpen}
+                backdropDismiss={true}
+                backdropBreakpoint={0.75}
+                initialBreakpoint={Breakpoint.Search}
+                breakpoints={[0, Breakpoint.Search, 0.75]}
+                onIonModalDidDismiss={() => setSearchOpen(false)}
+                // onIonModalDidPresent={onSearchStart}
+                onIonBreakpointDidChange={setBreakpointPadding}
             >
-                <IonHeader>
-                    <IonSearchbar
-                        onClick={() => searchModalRef.current?.setCurrentBreakpoint(0.5)}
-                        placeholder="Search"
-                    />
-                </IonHeader>
                 <IonContent>
-                    {/* <IonItem lines="none" className="ion-no-padding">
-                    <IonButton slot="end" color="dark">
-                        <IonIcon slot="icon-only" icon={keyOutline} className="ion-padding-vertical" />
-                    </IonButton>
-                </IonItem> */}
+                    <IonSearchbar
+                        ref={searchBarRef}
+                        placeholder="Search Rentals"
+                        debounce={150}
+                        showCancelButton="always"
+                        onIonChange={changeSearch}
+                        // onClick={() => setSearchModalOpen(true)}
+                        onIonCancel={cancelSearch}
+                    />
                     <IonList>
                         {stationList}
                     </IonList>
@@ -263,49 +291,79 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
                 </IonContent>
             </IonModal>
         )
-    }, [stationList]);
+    }, [isSearchOpen, stationList]);
 
-    const rideModal = React.useMemo(() => {
+    const [rideOpen, setRideOpen] = React.useState(false);
+
+    const startRide = () => {
+        setRideOpen(true);
+    }
+
+    const [isContractOpen, setContractOpen] = React.useState(false);
+
+    const useContract = () => {
+        setContractOpen(false);
+    }
+
+    const cancelContract = () => {
+        setContractOpen(false);
+    }
+
+    const contract = React.useMemo(() => {
+        if (!vehicles || !vehicleId) return;
+        const vehicle = vehicles[vehicleId];
         return (
-            <IonModal
-                trigger="ride"
-                initialBreakpoint={0.75}
-            // breakpoints={[0, 0.75]}
-            >
-                <IonHeader>
-                    <IonToolbar>
-                        <IonTitle>Ride</IonTitle>
-                    </IonToolbar>
-                </IonHeader>
-                <IonContent>
-                    <VehicleConnection />
-                </IonContent>
-            </IonModal>
+            <ContractItem
+                vehicle={vehicle}
+                id={vehicleId}
+                onCancel={cancelContract}
+                onSubmit={useContract}
+            />
         )
-    }, []);
+    }, [vehicles, vehicleId]);
 
-    const [center, setCenter] = React.useState<string[]>();
+    const contractModal = React.useMemo(() => (
+        <IonModal
+            isOpen={isContractOpen}
+        >
+            {contract}
+        </IonModal>
+    ), [isContractOpen, contract]);
 
-    React.useEffect(() => {
-        if (!stationId) return;
-        setCenter([stationId]);
-    }, [stationId])
+    const view: View = React.useMemo(() => {
+        return { center, padding };
+    }, [center, padding]);
 
     return (
         <IonPage>
-            {header}
+            <PageHeader title="Rentals" menuButton={true}>
+                {/* <IonSearchbar
+                    className="ion-no-padding"
+                    placeholder="Rentals"
+                    animated={true}
+                    debounce={300}
+                    onClick={() => setSearchModalOpen(true)}
+                /> */}
+                <IonButtons slot="end">
+                    <IonButton onClick={startSearch}>
+                        <IonIcon slot="icon-only" icon={searchOutline} />
+                    </IonButton>
+                </IonButtons>
+            </PageHeader>
             <IonContent fullscreen={true} scrollY={false}>
                 <StationMap
-                    onBlur={minimize}
-                    onClick={hide}
+                    // onBlur={minimize}
+                    onDrag={minimizeStation}
+                    onClick={hideAll}
                     onFocus={selectStation}
-                    center={center}
-                    padding={padding}
+                    // center={center}
+                    // filter={filter}
+                    view={view}
                 />
                 {fabs}
                 {searchModal}
                 {stationModal}
-                {rideModal}
+                {contractModal}
             </IonContent>
             {/* <IonFooter translucent={true}>
                 <IonToolbar>

@@ -5,15 +5,17 @@ import {
 } from "firebase/firestore";
 import { GeohashRange } from "geofire-common";
 import { Path } from "./enums";
+import { Security } from "./security";
 import { Station } from "./station";
 
 export interface Vehicle {
+    free: boolean;
     geohash: string;
     isOnline: boolean;
     licenseId: string;
     model: string;
     name: string;
-    security: DocumentReference;
+    security: DocumentReference<Security>;
     station: DocumentReference<Station>;
 }
 
@@ -27,7 +29,7 @@ const converter = {
         options: SnapshotOptions
     ): Vehicle {
         const {
-            // id,
+            free,
             geohash,
             licenseId,
             model,
@@ -36,7 +38,7 @@ const converter = {
             station,
         } = snapshot.data(options);
         return {
-            // id,
+            free,
             geohash,
             isOnline: !!security,
             licenseId,
