@@ -1,7 +1,7 @@
 import {
     collection, doc, query, where,
     getDoc, getDocs,
-    DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, orderBy, setDoc, updateDoc, startAt, endAt,
+    DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, orderBy, setDoc, updateDoc, startAt, endAt, QueryConstraint, GeoPoint, limit, getCountFromServer,
 } from "firebase/firestore";
 import { GeohashRange } from "geofire-common";
 import { Path } from "./enums";
@@ -13,6 +13,7 @@ export interface Vehicle {
     geohash: string;
     isOnline: boolean;
     licenseId: string;
+    location: GeoPoint;
     model: string;
     name: string;
     security: DocumentReference<Security>;
@@ -32,6 +33,7 @@ const converter = {
             free,
             geohash,
             licenseId,
+            location,
             model,
             name,
             security,
@@ -42,6 +44,7 @@ const converter = {
             geohash,
             isOnline: !!security,
             licenseId,
+            location,
             model,
             name,
             security,
@@ -58,7 +61,7 @@ export const getVehicles = (
     db: Firestore,
     stationId?: string
 ) => {
-    const constraints = [orderBy('name')];
+    const constraints: QueryConstraint[] = [orderBy('name')];
     if (stationId) {
         constraints.push(where(
             'station',
@@ -72,13 +75,18 @@ export const getVehicles = (
 export const getVehiclesAt = (
     db: Firestore,
     geohashRange: GeohashRange,
+    isLimited?: boolean,
 ) => {
     const [ start, end ] = geohashRange;
-    return query(
-        collection(db, Path.vehicle),
+    const constrains: QueryConstraint[] = [
         orderBy('geohash'),
         startAt(start),
-        endAt(end)
+        endAt(end),
+    ];
+    if (isLimited) constrains.push(limit(1));
+    return query(
+        collection(db, Path.vehicle),
+        ...constrains,
     ).withConverter(converter);
 };
 

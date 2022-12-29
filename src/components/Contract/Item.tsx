@@ -1,15 +1,17 @@
 import React from 'react';
-import { IonButton, IonButtons, IonContent, IonDatetime, IonDatetimeButton, IonHeader, IonItem, IonLabel, IonList, IonListHeader, IonModal, IonSelect, IonSelectOption, IonTitle, IonToolbar, useIonLoading } from '@ionic/react';
+import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
+import { IonBadge, IonButton, IonButtons, IonContent, IonDatetime, IonDatetimeButton, IonHeader, IonIcon, IonItem, IonItemDivider, IonLabel, IonList, IonListHeader, IonModal, IonNote, IonSelect, IonSelectOption, IonSpinner, IonTitle, IonToggle, IonToolbar, useIonLoading } from '@ionic/react';
 import { getVehicle, Vehicle } from '../../utils/db/vehicle';
 import { setContract } from '../../utils/db/contract';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { Timestamp } from 'firebase/firestore';
 import { useAuthenticationContext } from '../../contexts/Authentication';
 import { dayMs } from '../../utils/datetime';
+import { bulbOutline, calendarOutline, cardOutline, checkmarkOutline, documentTextOutline, enterOutline, heartOutline, hourglass, hourglassOutline, keyOutline, scanOutline, walletOutline } from 'ionicons/icons';
 
 interface Props {
-    id: string;
-    vehicle: Vehicle;
+    id?: string;
+    vehicle?: Vehicle;
     onCancel: () => void;
     onSubmit: () => void;
 }
@@ -31,11 +33,11 @@ const periodOptions = periods.map((key) => {
 
 const timeZoneOffset = new Date().getTimezoneOffset();
 
-const formatDate = (date: Date) => date.toISOString().substring(0,10);
+const formatDate = (date: Date) => date.toISOString();
 
 const ContractItem = React.memo<Props>(({
     id,
-    vehicle,
+    vehicle = {},
     onCancel,
     onSubmit,
 }) => {
@@ -60,7 +62,7 @@ const ContractItem = React.memo<Props>(({
         setContract(db, {
             start: new Timestamp(new Date(startDate).getTime() / 1000, 0),
             end: endDate ? new Timestamp(new Date(endDate).getTime() / 1000, 0) : undefined,
-            asset: getVehicle(db, id),
+            asset: id ? getVehicle(db, id) : undefined,
             user: user.uid,
         }).then(() => {
             dismiss();
@@ -75,9 +77,9 @@ const ContractItem = React.memo<Props>(({
                 <IonButtons slot="start">
                     <IonButton onClick={onCancel}>Cancel</IonButton>
                 </IonButtons>
-                <IonTitle>Contract</IonTitle>
+                <IonTitle>Lease</IonTitle>
                 <IonButtons slot="end">
-                    <IonButton onClick={startContract}>Start</IonButton>
+                    <IonButton onClick={startContract}>Accept</IonButton>
                 </IonButtons>
             </IonToolbar>
         </IonHeader>
@@ -85,7 +87,7 @@ const ContractItem = React.memo<Props>(({
 
     if (!user) {
         signIn();
-        return null;
+        // return null;
     }
 
     const changePeriod = (event: Event) => {
@@ -128,61 +130,270 @@ const ContractItem = React.memo<Props>(({
     //     setEndDate(dates);
     // }
 
+    const scan = React.useCallback(async () => {
+        const result = await BarcodeScanner.startScan();
+
+        // if the result has content
+        if (result.hasContent) {
+            console.log(result.content); // log the raw scanned content
+        }
+    }, []);
+
+    const terms = React.useMemo(() => (
+        <IonList>
+            <IonListHeader >
+                <IonLabel className="ion-no-margin">
+                    Conditions
+                </IonLabel>
+            </IonListHeader>
+            <IonItemDivider color="transparent">
+                <IonLabel><p>Lease details</p></IonLabel>
+            </IonItemDivider>
+            <IonItem>
+                <IonLabel>
+                    Accept
+                </IonLabel>
+                <IonToggle slot="end"></IonToggle>
+            </IonItem>
+            <IonItem>
+                <IonLabel class="ion-text-wrap">
+                    Multi-line text that should ellipsis when it is too long
+                    to fit on one line. Lorem ipsum dolor sit amet,
+                    consectetur adipiscing elit.
+                </IonLabel>
+            </IonItem>
+            <IonItem>
+                <IonIcon icon={cardOutline} slot="start" />
+                <IonLabel>
+                    Licensed
+                    <p>Holding valid driver license</p>
+                </IonLabel>
+            </IonItem>
+            <IonItem>
+                <IonIcon icon={bulbOutline} slot="start" />
+                <IonLabel>
+                    Capable
+                    <p>Fitting medically and mentally</p>
+                </IonLabel>
+            </IonItem>
+            <IonItem>
+                <IonIcon icon={heartOutline} slot="start" />
+                <IonLabel>
+                    Responsible
+                    <p>Protecting yourself and others</p>
+                </IonLabel>
+            </IonItem>
+        </IonList>
+    ), []);
+
+    const status = React.useMemo(() => (
+        <IonList>
+            <IonListHeader >
+                <IonLabel className="ion-no-margin">
+                    Status
+                </IonLabel>
+            </IonListHeader>
+            <IonItemDivider
+                color="transparent"
+            >
+                <IonLabel><p>Lease progression</p></IonLabel>
+            </IonItemDivider>
+            <IonItem lines="none">
+                <IonIcon icon={documentTextOutline} slot="start" />
+                <IonLabel>
+                    Agreement
+                    <p>Accept the contract</p>
+                </IonLabel>
+                <IonIcon icon={checkmarkOutline} slot="end" />
+            </IonItem>
+            <IonItem lines="none">
+                <IonIcon icon={walletOutline} slot="start" />
+                <IonLabel>
+                    Payment
+                    <p>Pay the rental fee in person</p>
+                </IonLabel>
+                <IonSpinner name="lines-sharp-small" slot="end" />
+            </IonItem>
+            <IonItem lines="none" detail={true}>
+                <IonIcon icon={keyOutline} slot="start" color="medium" />
+                <IonLabel color="medium">
+                    Access
+                    <p>Start the ride</p>
+                </IonLabel>
+                {/* <IonIcon icon={checkmarkOutline} slot="end" /> */}
+            </IonItem>
+            <IonItem lines="none" detail={true}>
+                <IonIcon icon={calendarOutline} slot="start" color="medium" />
+                <IonLabel color="medium">
+                    Return
+                    {/* <p>Drop off the vehicle</p> */}
+                    <p>Khun Mam's Kitchen</p>
+                </IonLabel>
+                <IonNote slot="end">31 Dec</IonNote>
+                {/* <IonBadge>31 Dec</IonBadge> */}
+                {/* <IonIcon icon={checkmarkOutline} slot="end" /> */}
+            </IonItem>
+        </IonList>
+    ), []);
+
+    const vehicleItem = (
+        <IonItem lines="none" detail={true}>
+            <IonLabel>
+                Yoyo
+                <p>Honda Click 125cc</p>
+            </IonLabel>
+            <IonNote slot="end">AB 1234</IonNote>
+            {/* <IonSpinner name="lines-sharp-small" slot="end" />
+            <IonIcon icon={walletOutline} slot="end" color="warning" />
+            <IonIcon icon={documentTextOutline} slot="end" color="success" /> */}
+            {/* <IonNote>21 - 31 Dec</IonNote> */}
+        </IonItem>
+    );
+
+    const content = React.useMemo(() => (
+        <IonContent className="ion-padding">
+            <IonList>
+                <IonListHeader>Vehicle</IonListHeader>
+                <IonItemDivider color="transparent">
+                    <IonLabel><p>Leased</p></IonLabel>
+                </IonItemDivider>
+                {vehicleItem}
+                {/* <IonItem>
+                    <IonLabel>
+                        Name
+                    </IonLabel>
+                    <IonNote>Honda Click 125cc</IonNote>
+                </IonItem>
+                <IonItem>
+                    <IonLabel>
+                        License
+                    </IonLabel>
+                    <IonNote>AB 1245</IonNote>
+                </IonItem> */}
+                {/* <IonItem detail={true} button={true} onClick={scan}>
+                        <IonIcon icon={scanOutline} slot="start" />
+                        <IonLabel>Scan</IonLabel>
+                    </IonItem> */}
+
+                {/* <IonListHeader >
+                    <IonLabel className="ion-no-margin">
+                        Dates
+                    </IonLabel>
+                </IonListHeader> */}
+
+                {status}
+
+                <IonListHeader>Terms</IonListHeader>
+                <IonItemDivider color="transparent">
+                    <IonLabel><p>Location</p></IonLabel>
+                </IonItemDivider>
+                <IonItem detail={true} lines="none">
+                    <IonLabel>Station</IonLabel>
+                    <IonLabel slot="end">Khun Mam's Kitchen</IonLabel>
+                    {/* <IonLabel>{name}</IonLabel> */}
+                </IonItem>
+                <IonItem lines="none">
+                    <IonLabel>Address</IonLabel>
+                    <IonNote slot="end">Moo 2, Ko Mak, 12330</IonNote>
+                    {/* <IonLabel>{name}</IonLabel> */}
+                </IonItem>
+
+                <IonItemDivider color="transparent">
+                    <IonLabel><p>Dates</p></IonLabel>
+                </IonItemDivider>
+                <IonItem lines="none">
+                    <IonLabel>Period</IonLabel>
+                    <IonSelect
+                        interface="action-sheet"
+                        value={period}
+                        onIonChange={changePeriod}
+                    >
+                        {periodOptions}
+                    </IonSelect>
+                </IonItem>
+                <IonItem lines="none">
+                    <IonLabel>Start</IonLabel>
+                    <IonDatetimeButton datetime="start" />
+                    <IonModal keepContentsMounted={true}>
+                        <IonDatetime
+                            // ref={startDate}
+                            id="start"
+                            presentation="date-time"
+                            min={new Date().toISOString()}
+                            value={startDate}
+                            onIonChange={(event) => changeDate(event, setStartDate)}
+                        />
+                    </IonModal>
+                </IonItem>
+                {period > 0 && <IonItem lines="none">
+                    <IonLabel>Return</IonLabel>
+                    <IonDatetimeButton datetime="end" />
+                    <IonModal keepContentsMounted={true}>
+                        <IonDatetime
+                            // ref={startDate}
+                            id="end"
+                            // multiple={true}
+                            presentation="date"
+                            min={new Date(new Date(startDate).getTime() + dayMs).toISOString()}
+                            value={endDate}
+                            onIonChange={(event) => changeDate(event, setEndDate)}
+                        // onIonChange={changeDate}
+                        />
+                    </IonModal>
+                </IonItem>}
+            </IonList>
+            {/* <IonList>
+
+                <IonListHeader >
+                    <IonLabel className="ion-no-margin">
+                        Vehicle
+                    </IonLabel>
+                </IonListHeader>
+                <IonItemDivider color="transparent" >
+                    <IonLabel><p>Leased</p></IonLabel>
+                </IonItemDivider>
+
+            </IonList> */}
+            {/* <IonList>
+                <IonListHeader >
+                    <IonLabel className="ion-no-margin">
+                        Details
+                    </IonLabel>
+                </IonListHeader>
+                <IonItemDivider color="transparent" >
+                    <IonLabel><p>Lease terms</p></IonLabel>
+                </IonItemDivider>
+
+                <IonItem lines="none">
+                    <IonLabel color="medium">Station name</IonLabel>
+                    <IonNote>Khun Mam's Kitchen</IonNote>
+                </IonItem>
+                <IonItem lines="none">
+                    <IonLabel color="medium">Address</IonLabel>
+                    <IonNote>Moo 2, Ko Mak, 12330</IonNote>
+                </IonItem>
+                <IonItem lines="none">
+                    <IonLabel color="medium">Vehicle</IonLabel>
+                    <IonNote>Honda Click 125cc</IonNote>
+                </IonItem>
+                <IonItem lines="none">
+                    <IonLabel color="medium">License</IonLabel>
+                    <IonNote>AB 1245</IonNote>
+                </IonItem>
+                <IonItem lines="none">
+                    <IonLabel color="medium">Period</IonLabel>
+                    <IonNote>17/12/2022 - 28/12/2022</IonNote>
+                </IonItem>
+            </IonList> */}
+        </IonContent>
+    ), []);
+
     return (
         <>
             {header}
-            <IonContent>
-                <IonList>
-                    <IonListHeader>Vehicle</IonListHeader>
-                    <IonItem>
-                        <IonLabel>Name</IonLabel>
-                        <IonLabel>{name}</IonLabel>
-                    </IonItem>
-                    <IonListHeader>Terms</IonListHeader>
-                    <IonItem>
-                        <IonLabel>Period</IonLabel>
-                        <IonSelect
-                            interface="action-sheet"
-                            value={period}
-                            onIonChange={changePeriod}
-                        >
-                            {periodOptions}
-                        </IonSelect>
-                    </IonItem>
-                    <IonItem>
-                        <IonLabel>Start date</IonLabel>
-                        <IonDatetimeButton datetime="start" />
-                        <IonModal keepContentsMounted={true}>
-                            <IonDatetime
-                                // ref={startDate}
-                                id="start"
-                                presentation="date"
-                                min={new Date().toISOString()}
-                                value={startDate}
-                                onIonChange={(event) => changeDate(event, setStartDate)}
-                            />
-                        </IonModal>
-                    </IonItem>
-                    {period > 0 && <IonItem>
-                        <IonLabel>End date</IonLabel>
-                        <IonDatetimeButton datetime="end" />
-                        <IonModal keepContentsMounted={true}>
-                            <IonDatetime
-                                // ref={startDate}
-                                id="end"
-                                // multiple={true}
-                                presentation="date"
-                                min={new Date(new Date(startDate).getTime() + dayMs).toISOString()}
-                                value={endDate}
-                                onIonChange={(event) => changeDate(event, setEndDate)}
-                                // onIonChange={changeDate}
-                            />
-                        </IonModal>
-                    </IonItem>}
-                </IonList>
-            </IonContent>
+            {content}
         </>
-    )
+    );
 });
 
 export { ContractItem };

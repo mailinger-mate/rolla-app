@@ -3,8 +3,6 @@ import { Storage } from '@ionic/storage';
 import { storageExpiry } from '../config';
 import { isAfter } from '../utils/datetime';
 
-
-
 const storage = new Storage();
 storage.create();
 
@@ -24,7 +22,7 @@ const expire = (
     return storage.set(key, new Record(value))
 }
 
-interface Context extends Pick<Storage, 'get' | 'set'> {
+interface Context extends Pick<Storage, 'get' | 'set' | 'clear' | 'remove'> {
     expire: (
         key: string,
         value: unknown,
@@ -32,8 +30,10 @@ interface Context extends Pick<Storage, 'get' | 'set'> {
 }
 
 const context: Context = {
+    clear: () => storage.clear(),
     expire,
     get: (key) => storage.get(key),
+    remove: (key) => storage.remove(key),
     set: (key, value) => storage.set(key, value),
 }
 

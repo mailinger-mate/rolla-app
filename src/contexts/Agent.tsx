@@ -5,7 +5,7 @@ import { agentScan, agentScanInterval, agentSkill, agentSleepAfter, animationDel
 import { useFirebaseContext } from './Firebase';
 import { Security } from '../utils/db/security';
 import { IonButton, IonButtons, IonContent, IonIcon, IonItem, IonItemDivider, IonLabel, IonList, IonListHeader, IonModal, IonSpinner, useIonToast } from '@ionic/react';
-import { bluetoothOutline, checkmarkOutline, key, lockClosedOutline, lockOpenOutline, moonOutline, radioOutline, sunnyOutline, warning } from 'ionicons/icons';
+import { bluetoothOutline, checkmarkOutline, key, lockClosedOutline, lockOpenOutline, mapOutline, moonOutline, radioOutline, sunnyOutline, warning } from 'ionicons/icons';
 import { useContractContext } from './Contract';
 import { PageHeader } from '../components/Layout/PageHeader';
 import { useVehicleContext } from './Vehicle';
@@ -76,7 +76,7 @@ enum Breakpoint {
     Max = 0.9,
 }
 
-enum StorageKey {
+enum Key {
     AccessKey = 'accessKey',
     Agent = 'agent',
     Skill = 'agentSkill',
@@ -107,6 +107,10 @@ const AgentProvider = React.memo((props) => {
     const modalRef = React.useRef<HTMLIonModalElement>(null);
 
     const [isSelecting, setSelecting] = React.useState(false);
+    
+    // React.useEffect(() => {
+    //     setTimeout(() => setSelecting(true), 1000);
+    // }, []);
 
     const [presentToast] = useIonToast();
 
@@ -130,9 +134,9 @@ const AgentProvider = React.memo((props) => {
     const practiceSkill = React.useCallback(async (
         callback: () => void,
     ) => {
-        const skill = await storage.get(StorageKey.Skill) || 0;
+        const skill = await storage.get(Key.Skill) || 0;
         if (skill >= agentSkill) return setSkilled(true);
-        await storage.set(StorageKey.Skill, skill + 1);
+        await storage.set(Key.Skill, skill + 1);
         callback();
     }, [storage]);
 
@@ -170,14 +174,14 @@ const AgentProvider = React.memo((props) => {
             const data = document.data();
             if (!data?.accessKey) return;
             accessKey.current = data.accessKey;
-            await storage.expire(`${StorageKey.AccessKey}/${agent}`, key);
+            await storage.expire(`${Key.AccessKey}/${agent}`, key);
         });
     }, [storage, security, agent]);
 
     const writeLock2 = React.useCallback(async () => {
         if (!device.current) return;
 
-        const storedKey: Record<string> = await storage.get(`${StorageKey.AccessKey}/${device.current.name}`);
+        const storedKey: Record<string> = await storage.get(`${Key.AccessKey}/${device.current.name}`);
         const key = accessKey.current || storedKey.value;
 
         if (!key || !nonce.current) throw error(Message.NoAccess);
@@ -188,7 +192,7 @@ const AgentProvider = React.memo((props) => {
 
         if (key !== storedKey.value) {
             await storage.expire(
-                `${StorageKey.AccessKey}/${device.current.name}`,
+                `${Key.AccessKey}/${device.current.name}`,
                 key,
             );
         }
@@ -211,6 +215,7 @@ const AgentProvider = React.memo((props) => {
     };
 
     React.useEffect(() => {
+        storage.remove(Key.Skill);
         return () => {
             disconnect(true);
         }
@@ -228,7 +233,7 @@ const AgentProvider = React.memo((props) => {
             clearDevice();
         });
 
-        await storage.set(StorageKey.Agent, device.current.name);
+        await storage.set(Key.Agent, device.current.name);
 
         setAgent(device.current.name);
 
@@ -322,20 +327,23 @@ const AgentProvider = React.memo((props) => {
         return () => clearInterval(interval);
     }, []);
 
-    const connectA = React.useCallback(async (
+    const select = React.useCallback(async (
         id?: string,
     ) => {
         try {
             let newTarget = id;
             if (!newTarget) {
-                const lastId = await storage.get(StorageKey.Agent);
-                const someId = assetsLeased.indexOf(lastId) >= 0 ? lastId : assetsLeased[0];
-                if (someId) newTarget = someId;
-                else return;
+                const lastId = await storage.get(Key.Agent);
+                if (assetsLeased) {
+                    const leasedId = assetsLeased.indexOf(lastId) >= 0 ? lastId : assetsLeased[0];
+                    if (leasedId) newTarget = leasedId;
+                } else {
+                    newTarget = lastId;
+                }
             }
 
             setTarget(newTarget);
-            if (newTarget === agent) return await writeLock2();
+            if (newTarget && newTarget === agent) return await writeLock2();
 
             try {
                 if (!agent) {
@@ -379,7 +387,7 @@ const AgentProvider = React.memo((props) => {
                     isConnected={isConnected}
                     isUnlocked={isConnected && isLockOpen}
                     isTarget={isTarget}
-                    select={() => connectA(id)}
+                    select={() => select(id)}
                     disconnect={disconnect}
                 />
             );
@@ -391,7 +399,7 @@ const AgentProvider = React.memo((props) => {
 
         return agents.reduce((list: JSX.Element[] | undefined, record) => {
             const id = record.value.device.name;
-            if (!id || assetsLeased.indexOf(id) >= 0) return;
+            if (!id || !assetsLeased || assetsLeased.indexOf(id) >= 0) return;
 
             const item = (
                 <VehicleListItem
@@ -494,7 +502,7 @@ const AgentProvider = React.memo((props) => {
     const headerOnline = React.useMemo(() => {
         const icon = scan === true
             ? <IonSpinner name="lines-sharp-small" slot="end" />
-            : scan === false && <IonIcon icon={warning} slot="end" />;
+            : scan === false && <IonIcon icon={warning} color="medium" slot="end" />;
 
         if (!icon && !listOnline) return;
 
@@ -530,7 +538,7 @@ const AgentProvider = React.memo((props) => {
 
     return (
         <AgentContext.Provider value={{
-            select: connectA,
+            select,
             open,
             close,
             // toggle,
@@ -542,6 +550,7 @@ const AgentProvider = React.memo((props) => {
             <IonModal
                 ref={modalRef}
                 // isOpen={isModal}
+                // isOpen={true}
                 canDismiss={true}
                 initialBreakpoint={Breakpoint.Min}
                 breakpoints={[0, Breakpoint.Min, Breakpoint.Max]}
@@ -563,13 +572,19 @@ const AgentProvider = React.memo((props) => {
                                 Vehicles
                             </IonLabel>
                         </IonListHeader>
-                        {listLeased && (
-                            <IonItemDivider
-                                color="transparent"
-                            >
-                                <IonLabel><p>Leased</p></IonLabel>
-                            </IonItemDivider>
-                        )}
+                        <IonItemDivider
+                            color="transparent"
+                        >
+                            <IonLabel><p>Leased</p></IonLabel>
+                        </IonItemDivider>
+                        <IonItem
+                            detail={true}
+                            lines="none"
+                        >
+                            <IonLabel color="secondary">
+                                Find nearest vehicle
+                            </IonLabel>
+                        </IonItem>
                         {listLeased}
                         {headerOnline}
                         {listOnline}

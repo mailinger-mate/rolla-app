@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonButton, IonButtons, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonContent, IonDatetime, IonDatetimeButton, IonFab, IonFabButton, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonModal, IonPage, IonSearchbar, IonTitle, IonToolbar } from '@ionic/react';
+import { IonBadge, IonButton, IonButtons, IonCard, IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonContent, IonDatetime, IonDatetimeButton, IonFab, IonFabButton, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonModal, IonPage, IonSearchbar, IonSpinner, IonTitle, IonToolbar } from '@ionic/react';
 import { RouteChildrenProps } from 'react-router';
 import { arrowRedo, call, navigateOutline, searchOutline } from 'ionicons/icons';
 import { useStationContext } from '../../contexts/Station';
@@ -13,6 +13,7 @@ import { PageHeader } from '../../components/Layout/PageHeader';
 import { ContractItem } from '../../components/Contract/Item';
 import { useContractContext } from '../../contexts/Contract';
 import { useAgentContext } from '../../contexts/Agent';
+import { useLocationContext } from '../../contexts/Location';
 
 enum Breakpoint {
     Station = 0.5,
@@ -21,6 +22,7 @@ enum Breakpoint {
 }
 
 const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
+    const { watchPosition, position } = useLocationContext();
     const { stations } = useStationContext();
     const { vehicles } = useVehicleContext();
     const { hasLease } = useContractContext();
@@ -57,18 +59,37 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
     //     setStationOpen(true);
     // }, [stationModalRef]);
 
+    const [isLocating, setLocating] = React.useState(false);
+
+    React.useEffect(() => {
+        if (isLocating && position) setLocating(false);
+    }, [position]);
+
+    const locatee = () => {
+        // setLocating(true);
+        // watchPosition();
+        // locate();
+    }
+
     const fabs = React.useMemo(() => (
         <IonFab
             slot="fixed"
             vertical="top"
             horizontal="end"
         >
-            <IonFabButton color="medium" id="position" size="small">
-                <IonIcon icon={navigateOutline}></IonIcon>
+            <IonFabButton
+                color="medium"
+                id="position"
+                size="small"
+                onClick={locatee}
+            >
+                {isLocating
+                    ? <IonSpinner name="crescent" />
+                    : <IonIcon icon={navigateOutline} />}
             </IonFabButton>
             <VehicleConnectButton />
         </IonFab>
-    ), []);
+    ), [isLocating]);
 
     function reduceVehicles<Value>(
         stationId: string,
@@ -226,12 +247,13 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
 
             filter.push(stationId);
             list.push((
-                <IonItem onClick={onClick} key={stationId}>
+                <IonItem button={true} onClick={onClick} key={stationId}>
                     <IonLabel>
                         {name}
                         <p>{address}</p>
                     </IonLabel>
-                    <IonLabel slot="end" color="medium">{count}</IonLabel>
+                    {/* <IonLabel slot="end" color="medium">{count}</IonLabel> */}
+                    <IonBadge slot="end" color="primary">{count}</IonBadge>
                 </IonItem>
             ));
         }
@@ -285,6 +307,12 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
                         onIonCancel={cancelSearch}
                     />
                     <IonList>
+                        <IonItem detail={true}>
+                            <IonLabel>
+                                Africa
+                                <p>Continent</p>
+                            </IonLabel>
+                        </IonItem>
                         {stationList}
                     </IonList>
                     {/* <VehicleConnection /> */}
@@ -292,12 +320,6 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
             </IonModal>
         )
     }, [isSearchOpen, stationList]);
-
-    const [rideOpen, setRideOpen] = React.useState(false);
-
-    const startRide = () => {
-        setRideOpen(true);
-    }
 
     const [isContractOpen, setContractOpen] = React.useState(false);
 
@@ -310,8 +332,8 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
     }
 
     const contract = React.useMemo(() => {
-        if (!vehicles || !vehicleId) return;
-        const vehicle = vehicles[vehicleId];
+        // if (!vehicles || !vehicleId) return;
+        const vehicle = vehicles && vehicles[vehicleId];
         return (
             <ContractItem
                 vehicle={vehicle}

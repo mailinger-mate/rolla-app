@@ -99,7 +99,7 @@ const StationEdit = React.memo<Props>(({ id }) => {
                     center,
                     zoom: 4,
                     disableDefaultUI: true,
-                    styles: style,
+                    styles: style(),
                     keyboardShortcuts: false,
                     backgroundColor: '#000'
                 }

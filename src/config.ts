@@ -1,7 +1,9 @@
 import { dayMs } from "./utils/datetime";
 
-export const defaultRegion = [11.82, 102.48]; 
-export const radius = 30 * 1000;
+export const defaultLocation = [50, 10]; // [11.82, 102.48]; 
+export const defaultRadius = 30e3;
+export const minRadius = 10e3;
+export const maxRadius = 10e6;
 
 export const serviceUuid = '5afe1eaf-f000-4ecb-ab75-f9ec2e1f1f10';
 export const lockUuid = '0be70cad-92aa-48c3-b26a-330e339aa163';

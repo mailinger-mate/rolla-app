@@ -1,0 +1,19 @@
+.cellLabel {
+    /* color: #555; */
+    font-size: 3em;
+    font-weight: bold;
+    text-shadow: -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        1px 1px 0 #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+    .cellLabel {
+        /* color: #ddd; */
+        text-shadow: -1px -1px 0 #333,
+            1px -1px 0 #333,
+            -1px 1px 0 #333,
+            1px 1px 0 #333;
+    }
+}

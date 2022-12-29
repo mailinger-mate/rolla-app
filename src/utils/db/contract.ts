@@ -1,4 +1,4 @@
-import { doc, DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, collection, query, orderBy, where, Timestamp, setDoc, } from "firebase/firestore";
+import { doc, DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, collection, query, orderBy, where, Timestamp, setDoc, QueryConstraint, } from "firebase/firestore";
 import { Path } from "./enums";
 import { Vehicle } from "./vehicle";
 
@@ -46,7 +46,7 @@ export const getContract = (db: Firestore, id: string) => {
 }
 
 export const getContracts = (db: Firestore, active?: boolean) => {
-    const constraints = [orderBy('end')];
+    const constraints: QueryConstraint[] = [orderBy('end')];
     if (active) constraints.push(where('end', '>' , new Date()));
     return query(collection(db, Path.contract), ...constraints).withConverter(converter);
 }

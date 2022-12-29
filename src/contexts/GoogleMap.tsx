@@ -3,6 +3,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 
 const loader = new Loader({
     apiKey: process.env.REACT_APP_GOOGLE_API_KEY!,
+    libraries: ['geometry'],
     version: "weekly",
 }).load().then(google => google.maps);
 

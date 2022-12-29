@@ -7,13 +7,12 @@ type Contracts = Record<string, Contract>;
 
 interface Context {
     contracts?: Contracts;
-    assetsLeased: string[];
+    assetsLeased?: string[];
     hasLease: (vehicleId: string) => boolean;
 }
 
 const ContractContext = React.createContext<Context>({
     hasLease: () => false,
-    assetsLeased: [],
 });
 
 export const useContractContext = () => React.useContext(ContractContext);
@@ -58,6 +57,7 @@ const ContractProvider = React.memo(({ children }) => {
             const { asset } = contracts[id];
             if (list.indexOf(asset.id) < 0) list.push(asset.id);
         }
+        if (!list.length) return;
         return list;
     }, [contracts])
 

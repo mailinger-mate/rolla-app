@@ -3,7 +3,7 @@ import { Geohash, geohashQueryBounds, GeohashRange } from 'geofire-common';
 import { Firestore, onSnapshot, Query, QuerySnapshot, Unsubscribe } from 'firebase/firestore';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { useLocationContext } from '../../contexts/Location';
-import { radius } from '../../config';
+import { defaultRadius } from '../../config';
 
 interface Listener {
     geohashRange: GeohashRange;
@@ -22,6 +22,8 @@ const clearCollection = <
     geohashRangesCleared: GeohashRange[],
     previousCollection?: GeohashCollection<Document>,
 ) => {
+    if (!previousCollection) return;
+
     const collection: GeohashCollection<Document> = {};
 
     for (const id in previousCollection) {
@@ -47,9 +49,11 @@ const appendCollection = <
     query: QuerySnapshot<Document>,
     previousCollection?: GeohashCollection<Document>,
 ) => {
-    const collection: GeohashCollection<Document> = Object.assign({}, previousCollection);
+    const docChanges = query.docChanges();
+    if (!previousCollection && !docChanges.length) return;
 
-    query.docChanges().forEach(({ type, doc }) => {
+    const collection: GeohashCollection<Document> = Object.assign({}, previousCollection);
+    docChanges.forEach(({ type, doc }) => {
         const id = doc.ref.id;
         console.log('docChanges', type, doc.data())
         switch (type) {
@@ -72,11 +76,12 @@ export const useGeohashCollection = <
 >(
     query: (
         db: Firestore,
-        geohashRange: GeohashRange
+        geohashRange: GeohashRange,
+        isLimited?: boolean,
     ) => Query<Document>
 ) => {
     const { db } = useFirebaseContext();
-    const { location } = useLocationContext();
+    const { geohashRanges: locationQueryBounds, areaRadius } = useLocationContext();
 
     const [collection, setCollection] = React.useState<GeohashCollection<Document>>();
     const listeners = React.useRef<Listener[]>([]);
@@ -88,10 +93,15 @@ export const useGeohashCollection = <
         }
     }, []);
 
-    React.useEffect(() => {
-        if (!location) return;
+    const isLimited = React.useMemo(() => {
+        return areaRadius > defaultRadius;
+    }, [areaRadius]);
 
-        const geohashRangesNear = geohashQueryBounds(location, radius);
+    React.useEffect(() => {
+        console.log('locationQueryBounds', JSON.stringify(locationQueryBounds));
+        if (!locationQueryBounds || isLimited) return;
+
+        const geohashRangesNear = Array.from(locationQueryBounds);
         const geohashRangesFar: GeohashRange[] = [];
 
         let listenerIndex = listeners.current.length;
@@ -128,9 +138,9 @@ export const useGeohashCollection = <
             });
         });
 
-        console.log(JSON.stringify(listeners.current));
+        console.log('listeners', JSON.stringify(listeners.current));
 
-    }, [location]);
+    }, [locationQueryBounds, isLimited]);
 
     return collection;
 }
