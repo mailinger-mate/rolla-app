@@ -81,7 +81,7 @@ export const useGeohashCollection = <
     ) => Query<Document>
 ) => {
     const { db } = useFirebaseContext();
-    const { geohashRanges: locationQueryBounds, areaRadius } = useLocationContext();
+    const { location } = useLocationContext();
 
     const [collection, setCollection] = React.useState<GeohashCollection<Document>>();
     const listeners = React.useRef<Listener[]>([]);
@@ -94,14 +94,15 @@ export const useGeohashCollection = <
     }, []);
 
     const isLimited = React.useMemo(() => {
-        return areaRadius > defaultRadius;
-    }, [areaRadius]);
+        return location && location.radius > defaultRadius;
+    }, [location]);
 
     React.useEffect(() => {
-        console.log('locationQueryBounds', JSON.stringify(locationQueryBounds));
-        if (!locationQueryBounds || isLimited) return;
+        if (!location) return;
+        const { geohashRanges } = location;
+        console.log('locationQueryBounds', JSON.stringify(geohashRanges));
 
-        const geohashRangesNear = Array.from(locationQueryBounds);
+        const geohashRangesNear = Array.from(geohashRanges);
         const geohashRangesFar: GeohashRange[] = [];
 
         let listenerIndex = listeners.current.length;
@@ -140,7 +141,7 @@ export const useGeohashCollection = <
 
         console.log('listeners', JSON.stringify(listeners.current));
 
-    }, [locationQueryBounds, isLimited]);
+    }, [location, isLimited]);
 
     return collection;
 }

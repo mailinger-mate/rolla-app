@@ -14,36 +14,41 @@ export const useGeohashCount = <
         geohashRange: GeohashRange,
         isLimited?: boolean,
     ) => Query<Document>
-): Count => {
+): Count | undefined => {
     const { db } = useFirebaseContext();
-    const { geohashRanges: locationQueryBounds } = useLocationContext();
+    const { location } = useLocationContext();
 
     const [count, setCount] = React.useReducer((
-        state: Count,
+        state: Count | undefined,
         aggregate: { index: string, count: number }
     ) => {
         const { index, count } = aggregate;
+        let newState: Count;
         if (!state) {
-            return { [index]: count };
+            newState = { [index]: count };
         }
         else if (state[index] !== count) {
-            return {
+            newState = {
                 ...state,
                 [index]: count,
             };
         }
-        return state;
-    }, {});
+        return (!state
+            ? { [index]: count }
+            : state[index] !== count
+                ? { ...state, [index]: count } 
+                : false) || state;
+    }, undefined);
 
     React.useEffect(() => {
-        if (!locationQueryBounds) return;
-        locationQueryBounds.forEach(async (geohashRange) => {
+        if (!location) return;
+        location.geohashRanges.forEach(async (geohashRange) => {
             const [start, end] = geohashRange;
             const index = `${start}:${end}`;
-            const aggregate = await getCountFromServer(query(db, geohashRange));
-            setCount({ index, count: aggregate.data().count })
+            // const aggregate = await Math.round(Math.random() * 1000); // await getCountFromServer(query(db, geohashRange));
+            setCount({ index, count: Math.round(Math.random() * 1000) /* aggregate.data().count */ })
         });
-    }, [locationQueryBounds]);
+    }, [location]);
 
     return count;
 }

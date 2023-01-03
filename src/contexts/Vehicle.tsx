@@ -17,7 +17,7 @@ const useVehicleContext = () => React.useContext(VehicleContext);
 const VehicleProvider: React.FC = ({ children }) => {
     // const { zoom, setLocation } = useLocationContext();
     const vehicles = {} // useGeohashCollection<Vehicle>(getVehiclesAt);
-    const vehiclesCount = {} // useGeohashCount<Vehicle>(getVehiclesAt);
+    const vehiclesCount = useGeohashCount<Vehicle>(getVehiclesAt);
 
     // const [isLocating, setLocating] = React.useState(false);
 

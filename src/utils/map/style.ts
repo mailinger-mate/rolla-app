@@ -1,4 +1,6 @@
-export const style = (prefersDark = false) => {
+
+
+export const styleMap = (prefersDark = false) => {
     const high1 = prefersDark ? '#333333' : '#ffffff';
     const high2 = prefersDark ? '#353535' : '#fefefe';
     const high3 = prefersDark ? '#3c3c3c' : '#f5f5f5';

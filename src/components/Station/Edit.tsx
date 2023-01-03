@@ -5,7 +5,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { geohashForLocation } from 'geofire-common';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { getStation, setStation } from '../../utils/db/station';
-import { style } from '../../utils/map/style';
+import { styleMap } from '../../utils/map/style';
 import { GeoPoint } from 'firebase/firestore';
 import { useGoogleMapContext } from '../../contexts/GoogleMap';
 import VehicleList from '../Vehicle/List';
@@ -99,7 +99,7 @@ const StationEdit = React.memo<Props>(({ id }) => {
                     center,
                     zoom: 4,
                     disableDefaultUI: true,
-                    styles: style(),
+                    styles: styleMap(),
                     keyboardShortcuts: false,
                     backgroundColor: '#000'
                 }

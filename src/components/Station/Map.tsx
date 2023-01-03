@@ -1,16 +1,14 @@
 import React from 'react';
-import { geohashToPointFeature, geohashToPolygonFeature, geohashToPolygonGeometry, wrapAsFeatureCollection } from 'geohash-to-geojson';
-import { defaultLocation } from '../../config';
 import { useGoogleMapContext } from '../../contexts/GoogleMap';
 import { useLocationContext } from '../../contexts/Location';
-import { useStationContext } from '../../contexts/Station';
 import { useVehicleContext } from '../../contexts/Vehicle';
 import { Vehicle } from '../../utils/db/vehicle';
-import { style } from '../../utils/map/style';
-import { geohashesBetween } from '../../utils/geohashesBetween';
-import { boundingBoxCoordinates, distanceBetween, Geohash, geohashQueryBounds, GeohashRange } from 'geofire-common';
-import { cellsToMultiPolygon, cellToBoundary, cellToLatLng, edgeLength, getDirectedEdgeOrigin, getHexagonEdgeLengthAvg, gridDisk, H3Index, latLngToCell, polygonToCells, UNITS } from 'h3-js';
+import { styleMap } from '../../utils/map/style';
+import { distanceBetween } from 'geofire-common';
+import { cellToBoundary, cellToLatLng, getResolution, gridDisk, H3Index } from 'h3-js';
 import './Map.css';
+import { Feature, FeatureCollection } from 'geojson';
+import { km } from '../../utils/distance';
 
 export interface View {
     center?: string[] | boolean;
@@ -47,16 +45,6 @@ const randomColor = (lightness: number) => {
     return `hsl(${Math.random() * 10 * goldenAngle + 60}, 100%, ${Math.round(lightness * 100)}%)`;
 };
 
-const resolutions = [1100, 420, 160, 60, 20, 8, 3, 1, 0.5, 0.2, 0.1];
-
-const getResolution = (radius: number) => {
-    let index;
-    for (index = 0; index < resolutions.length; index++) {
-        if (radius / 1000 * 2 >= resolutions[index]) return index;
-    }
-    return index;
-}
-
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 const StationMap = React.memo<Props>(({
@@ -66,19 +54,19 @@ const StationMap = React.memo<Props>(({
     onDrag,
 }) => {
     const {
-        cell,
-        cellIndex,
-        cellRadius,
-        cellResolution,
-        area,
-        areaRadius,
+        // area,
+        // cell,
+        // cellIndex,
+        // cellRadius,
+        // area,
+        // ar   eaRadius,
         location,
-        locationRadius,
-        geohashRanges,
-        geohashRangesExcluded,
+        // locationRadius,
+        // geohashRanges,
+        // geohashRangesExcluded,
         position,
         setLocation,
-        setLocationBounds,
+        // setLocationRadius,
     } = useLocationContext();
     // const { stations } = useStationContext();
     const { vehicles, vehiclesCount } = useVehicleContext();
@@ -93,6 +81,40 @@ const StationMap = React.memo<Props>(({
 
     // const [focus, setFocus] = React.useState<'position' | 'view'>();
     // const focus = React.useRef<'position' | 'center'>();
+
+    const cellMarkers = React.useRef<Record<H3Index, google.maps.Marker>>({});
+    // const cellPolygons = React.useRef<Record<H3Index, google.maps.Polygon>>({});
+
+    // const [cellMax, setCellMax] = React.useReducer((
+    //     max: number,
+    //     count: number,
+    // ) => {
+    //     return count > max ? count : max;
+    // }, 0);
+
+
+
+    // React.useEffect(() => {
+    //     if (!map || !cellMax) return;
+
+    //     map.data.forEach(feature => {
+    //         const count = feature.getProperty('count');
+    //         const fillColor = cellColor(count);
+    //         map.data.overrideStyle(feature, {
+    //             fillColor,
+    //         });
+    //     });
+    // }, [map, cellMax]);
+
+    const cellMax = React.useRef<number>(0);
+    const cellColor = (count: number) => {
+        // return '#' + Math.floor(Math.random()*16777215).toString(16);
+        console.log('cellColor', count, cellMax.current)
+        return `hsl(120deg, ${Math.max(Math.round(count / cellMax.current * 100), 10)}%, 50%)`;
+    };
+
+    const cellResolution = React.useRef<number>(0);
+    // const cells = React.useRef<string[]>([]);
 
     React.useEffect(() => {
         console.log('position', position);
@@ -122,10 +144,10 @@ const StationMap = React.memo<Props>(({
 
     React.useEffect(() => {
         console.log('mapRef', mapRef.current, googleMaps)
-        if (!mapRef.current || !googleMaps) return;
+        if (!googleMaps || !mapRef.current) return;
         const { Map, Marker, LatLng, Point, Animation } = googleMaps;
 
-        const [latitude, longitude] = location || defaultLocation;
+        const { coordinates: [latitude, longitude], radius } = location;
         const center = new LatLng(latitude, longitude);
 
         const map = new Map(mapRef.current, {
@@ -135,7 +157,7 @@ const StationMap = React.memo<Props>(({
             // zoom: 6,
             minZoom: 4,
             disableDefaultUI: true,
-            styles: style(prefersDark),
+            styles: styleMap(prefersDark),
             keyboardShortcuts: false,
             backgroundColor: 'transparent',
             // gestureHandling: 'cooperative',
@@ -156,39 +178,55 @@ const StationMap = React.memo<Props>(({
         // });
 
         map.data.setStyle((feature) => {
-            const color = feature.getProperty('color');
+            const count = feature.getProperty('count');
+            if (feature.getGeometry()?.getType() === 'Point') {
+                return {
+                    icon: noSymbol,
+                    label: '' + count,
+                    opacity: count ? 1 : 0,
+                    zIndex: 10,
+                };
+            }
+
+            const fillColor = cellColor(count);
 
             return {
                 strokeColor: '#fff',
                 strokeWeight: 2,
-                fillOpacity: 0,
-                // fillColor: color,
-                label: {
-                    text: 'test',
-                    color: 'blue',
-                    fontSize: '12px',
-                },
+                strokeOpacity: 1,
+                fillOpacity: count ? 0.2 : 0,
+                fillColor,
                 zIndex: 3,
             }
-        })
+        });
+
+        // map.data.addListener('addfeature', (event: google.maps.Data.AddFeatureEvent) => {
+        //     const count = event.feature.getProperty('count');
+        // });
 
         map.addListener('click', () => {
             onClick && onClick();
         })
 
         map.addListener('idle', () => {
-            const center = map.getCenter();
-            if (!center) return;
-            setLocation([center.lat(), center.lng()]);
-
             const bounds = map.getBounds();
-            if (!bounds) return bounds;
+            const center = bounds?.getCenter();
+            if (!bounds || !center) return;
+
+            const coordinates: [number, number] = [center.lat(), center.lng()];
             const northEast = bounds?.getNorthEast();
             const southWest = bounds?.getSouthWest();
-            setLocationBounds([
-                [northEast.lat(), northEast.lng()],
-                [southWest.lat(), southWest.lng()]
-            ])
+            const radius = Math.ceil(
+                distanceBetween(
+                    [northEast.lat(), northEast.lng()],
+                    [southWest.lat(), southWest.lng()]
+                ) / 20
+            ) * 2 * km;
+            console.log('idle', radius);
+            setLocation({
+                coordinates,
+                radius
+            });
         });
 
         map.addListener('dragend', () => {
@@ -284,43 +322,54 @@ const StationMap = React.memo<Props>(({
 
     // }, [googleMaps, map, bounds, location]);
 
+    // React.useEffect(() => {
+    //     if (!vehicleCount) return;
 
+    //     for (const geohashRange in vehiclesCount) {
+    //         const count = vehiclesCount[count];
+    //     }
+    // }, [vehiclesCount]);
 
-    const areaCircle = React.useRef<google.maps.Circle>();
+    // const areaCircle = React.useRef<google.maps.Circle>();
 
-    React.useEffect(() => {
-        if (!cell || !cellRadius || !googleMaps || !map) return;
+    // React.useEffect(() => {
+    //     if (!location || !googleMaps || !map) return;
 
-        const { Circle, LatLng } = googleMaps;
-        const center = new LatLng(...cell);
-        if (!areaCircle.current) {
-            // areaCircle.current = new Circle({
-            //     map,
-            //     center,
-            //     radius: cellRadius,
-            //     strokeColor: 'tomato',
-            //     strokeWeight: 1,
-            //     fillOpacity: 0.1,
-            // })
-        } else {
-            areaCircle.current.setCenter(center);
-            areaCircle.current.setRadius(cellRadius);
-        }
-    }, [cell, cellRadius, googleMaps, map]);
+    //     const { coordinates, radius } = location;
+    //     const { Circle, LatLng } = googleMaps;
+    //     const center = new LatLng(...coordinates);
+    //     if (!areaCircle.current) {
+    //         areaCircle.current = new Circle({
+    //             map,
+    //             center,
+    //             radius: radius,
+    //             strokeColor: 'tomato',
+    //             strokeWeight: 1,
+    //             fillOpacity: 0.1,
+    //         })
+    //     } else {
+    //         areaCircle.current.setCenter(center);
+    //         areaCircle.current.setRadius(radius);
+    //     }
+    // }, [location, googleMaps, map]);
 
-    const cellMarkers = React.useRef<Record<H3Index, google.maps.Marker>>({});
-    const cellPolygons = React.useRef<Record<H3Index, google.maps.Polygon>>({});
+    // React.useEffect(() => {
+    //     if (!map || !cellIndex) return;
+    //     // setCellMax(0);
+    //     // for (const index in cellPolygons.current) {
+    //     //     const marker = cellMarkers.current[index];
+    //     //     const polygon = cellPolygons.current[index];
+    //     //     polygon.setMap(null);
+    //     //     marker.setMap(null);
+    //     // }
+    //     // cellPolygons.current = {};
+    //     // cellMarkers.current = {};
+    //     // cells.current = [];
+    //     // map.data.remo
 
-    React.useEffect(() => {
-        for (const index in cellPolygons.current) {
-            const marker = cellMarkers.current[index];
-            const polygon = cellPolygons.current[index];
-            polygon.setMap(null);
-            marker.setMap(null);
-        }
-        cellPolygons.current = {};
-        cellMarkers.current = {};
-    }, [cellResolution]);
+    //     const resolution = getResolution(cellIndex);
+
+    // }, [map, cellIndex]);
 
     const noSymbol = React.useMemo(() => {
         if (!googleMaps) return;
@@ -333,58 +382,149 @@ const StationMap = React.memo<Props>(({
         return symbol;
     }, [googleMaps]);
 
-    const max = Math.random() * 50;
-
+    // const max = Math.random() * 50;
 
 
     React.useEffect(() => {
-        if (!cellIndex || !googleMaps || !map) return;
+        if (!location || !googleMaps || !map) return;
 
-        const { LatLng, Marker, Polygon } = googleMaps;
+        const { Data, LatLng, Marker } = googleMaps;
+        // const { Polygon } = Data;
+        const { cellIndex } = location;
         const disk = gridDisk(cellIndex, 3);
 
-        let countMax = 0;
-        const counts = disk.map(() => {
-            const count = Math.round(Math.random() * 10);
-            if (countMax < count) countMax = count;
-            return count;
-        });
+        // let countMax = 0;
+        // const counts = disk.map(() => {
+        //     const count = Math.round(Math.random() * 10);
+        //     if (countMax < count) countMax = count;
+        //     return count;
+        // });
 
-        disk.forEach((h3Index, index) => {
-            if (cellPolygons.current[h3Index]) return;
-            const points = cellToBoundary(h3Index);
-            const paths = points.map(([latitude, longitude]) => new LatLng(latitude, longitude));
-            const position = new LatLng(...cellToLatLng(h3Index));
-            const count = counts[index];
-            const fillColor = `hsl(120deg, ${Math.max(Math.round(count / countMax * 100), 10)}%, 50%)`;
-            console.log('color', fillColor);
-            cellPolygons.current[h3Index] = new Polygon({
-                paths,
-                strokeColor: prefersDark ? '#444' : '#ddd',
-                strokeWeight: 1,
-                strokeOpacity: count ? 1 : 0,
-                fillOpacity: count ? Math.random() / 5 : 0,
-                fillColor,
-                map,
-                zIndex: 2
-            });
-            cellMarkers.current[h3Index] = new Marker({
-                icon: noSymbol,
-                label: {
-                    text: '' + count,
-                    fontSize: '2vmax',
-                    className: 'cellLabel',
-                    color: prefersDark ? '#ddd' : '#777'
-                },
-                opacity: count ? 1 : 0,
-                map,
-                optimized: true,
-                position,
-                // fillC
-                zIndex: 1,
-            });
-        });
-    }, [cellIndex, googleMaps, map]);
+        const resolution = getResolution(cellIndex);
+
+        if (cellResolution.current !== resolution) {
+            map.data.forEach(feature => map.data.remove(feature));
+            cellResolution.current = resolution;
+            cellMax.current = 0;
+        }
+
+        const polygons: FeatureCollection = {
+            type: 'FeatureCollection',
+            features: disk.reduce((
+                features: Feature[],
+                cellIndex,
+                index
+            ) => {
+                const feature = map.data.getFeatureById(cellIndex);
+                if (feature) {
+                    const max: number = feature.getProperty('max');
+                    if (max < cellMax.current) {
+                        console.log('max', max, '->', cellMax.current)
+                        const count: number = feature.getProperty('count');
+                        const fillColor = cellColor(count);
+                        feature.setProperty('max', cellMax.current);
+                        map.data.overrideStyle(feature, {
+                            fillColor,
+                        });
+                    }
+                    return features;
+                }
+                // if (cellPolygons.current[h3Index]) return;
+                // if (cells.current.indexOf(h3Index) >= 0) return polygons;
+                const polygon = cellToBoundary(cellIndex, true);
+                const [latitude, longitude] = cellToLatLng(cellIndex);
+                // const resolution = getResolution(h3Index);
+                // const paths = points.map(([latitude, longitude]) => new LatLng(latitude, longitude));
+                // const position = new LatLng(...point);
+                const count = Math.round(Math.random() * 3);
+                // const fillColor = `hsl(120deg, ${Math.max(Math.round(count / countMax * 100), 10)}%, 50%)`;
+                // console.log('color', fillColor);
+                if (count > cellMax.current) {
+                    console.log('new max', count);
+                    cellMax.current = count * 2;
+                }
+                // setCellMax(count);
+                // cells.current.push(h3Index);
+                features.push({
+                    type: 'Feature',
+                    id: cellIndex,
+                    geometry: {
+                        type: 'Polygon',
+                        coordinates: [polygon],
+                    },
+                    properties: {
+                        count,
+                        max: cellMax.current,
+                        resolution,
+                    }
+                });
+
+                features.push({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [longitude, latitude],
+                    },
+                    properties: {
+                        count,
+                        resolution,
+                    },
+                })
+                //cellPolygons.current[h3Index] =
+                // polygons.push({
+                //     type: "Feature",
+                //     geometry: {
+                //         ty
+                //     }
+                //     // new Polygon({
+                //     //     paths,
+                //     //     strokeColor: prefersDark ? '#444' : '#ddd',
+                //     //     strokeWeight: 1,
+                //     //     strokeOpacity: 0, // count ? 1 : 0,
+                //     //     fillOpacity: count ? Math.random() / 5 : 0,
+                //     //     fillColor,
+                //     //     // map,
+                //     //     zIndex: 2
+                //     // })
+                // });
+                // cellMarkers.current[h3Index] = new Marker({
+                //     icon: noSymbol,
+                //     label: {
+                //         text: '' + count,
+                //         fontSize: '2vmax',
+                //         className: 'cellLabel',
+                //         color: prefersDark ? '#ddd' : '#777'
+                //     },
+                //     opacity: count ? 1 : 0,
+                //     map,
+                //     optimized: true,
+                //     position,
+                //     // fillC
+                //     zIndex: 1,
+                // });
+                return features;
+            }, [])
+        };
+
+        map.data.addGeoJson(polygons);
+
+        // map.data.forEach(feature => {
+        //     const cellResolution: number = feature.getProperty('resolution');
+
+        //     if (cellResolution !== resolution) {
+        //         console.log('res', resolution, cellResolution)
+        //         map.data.remove(feature);
+        //         return;
+        //     }
+
+        //     const count = feature.getProperty('count');
+        // });
+
+        // if (cellResolution.current !== resolution) {
+        //     cellResolution.current = resolution;
+        //     cells.current = [];
+        // }
+    }, [location, googleMaps, map]);
 
     // React.useEffect(() => {
     //     if (!cellIndex) return;
@@ -394,126 +534,126 @@ const StationMap = React.memo<Props>(({
 
     // React.useEffect(() => {
     //     if (!googleMaps || !map || !location || !cell || !geohashRanges) return;
-        // const resolution = getResolution(radius);
-        // console.log('res', resolution)
-        // const [latitude, longitude] = location;
-        // const cell = latLngToCell(latitude, longitude, resolution);
-        // const edge = edgeLength(cell, UNITS.m);
-        // const [start] = geohashQueryBounds(location, edge)[0];
-        // const geohashStart = geohashToPolygonGeometry(start);
-        // const cellPoints = cellToBoundary(cell);
+    // const resolution = getResolution(radius);
+    // console.log('res', resolution)
+    // const [latitude, longitude] = location;
+    // const cell = latLngToCell(latitude, longitude, resolution);
+    // const edge = edgeLength(cell, UNITS.m);
+    // const [start] = geohashQueryBounds(location, edge)[0];
+    // const geohashStart = geohashToPolygonGeometry(start);
+    // const cellPoints = cellToBoundary(cell);
 
-        // const { Circle, LatLng, Marker, Polygon, SymbolPath } = googleMaps;
-        // const paths = geohashStart.coordinates.map(point => point.map(([longitude, latitude]) => new LatLng(latitude, longitude)));
-        // const cellPaths = cellPoints.map(([latitude, longitude]) => new LatLng(latitude, longitude));
-        // const paths = geohashCell.map(([latitude, longitude]) => new LatLng(latitude, longitude));
-        // if (!areaCell.current) {
-        //     areaCell.current = new Polygon({
-        //         paths: cellPaths,
-        //         strokeColor: 'grey',
-        //         strokeWeight: 1,
-        //         fillOpacity: 0,
-        //         map,
-        //     });
-        // } else {
-        //     areaCell.current.setPaths(cellPaths);
-        // }
-
-
-        // areaDisk.current?.forEach(polygon => {
-        //     polygon.setMap(null);
-        // });
-
-        // for (let index = 0; index < areaDisk.current.length; index++) {
-        //     const polygon = areaDisk.current[index];
-        //     polygon.setMap(null);
-        //     areaDisk.current.splice(index, 1);
-        // }
+    // const { Circle, LatLng, Marker, Polygon, SymbolPath } = googleMaps;
+    // const paths = geohashStart.coordinates.map(point => point.map(([longitude, latitude]) => new LatLng(latitude, longitude)));
+    // const cellPaths = cellPoints.map(([latitude, longitude]) => new LatLng(latitude, longitude));
+    // const paths = geohashCell.map(([latitude, longitude]) => new LatLng(latitude, longitude));
+    // if (!areaCell.current) {
+    //     areaCell.current = new Polygon({
+    //         paths: cellPaths,
+    //         strokeColor: 'grey',
+    //         strokeWeight: 1,
+    //         fillOpacity: 0,
+    //         map,
+    //     });
+    // } else {
+    //     areaCell.current.setPaths(cellPaths);
+    // }
 
 
-        // const areaRadius = getHexagonEdgeLengthAvg(resolution, UNITS.m) * 0.9;
-        // const [areaLatitude, areaLongitude] = cellToLatLng(cell);
-        // const areaCenter = new LatLng(areaLatitude, areaLongitude);
+    // areaDisk.current?.forEach(polygon => {
+    //     polygon.setMap(null);
+    // });
 
-        // geohashes.current = [];
+    // for (let index = 0; index < areaDisk.current.length; index++) {
+    //     const polygon = areaDisk.current[index];
+    //     polygon.setMap(null);
+    //     areaDisk.current.splice(index, 1);
+    // }
 
-        // const geohashRanges = geohashQueryBounds([areaLatitude, areaLongitude], areaRadius);
 
-        // const features = geohashRanges.reduce((
-        //     features: ReturnType<typeof geohashToPolygonFeature>[],
-        //     [start, end]
-        // ) => {
-        //     const geohashRanges = geohashesBetween(start, end);
-        //     // console.log('between', start, end, geohashRanges)
-        //     geohashRanges.forEach(geohash => {
-        //         if (geohashes.current.indexOf(geohash) >= 0) return;
-        //         const isExcluded = geohashRangesExcluded && geohashRangesExcluded.flat().indexOf(geohash) >= 0;
+    // const areaRadius = getHexagonEdgeLengthAvg(resolution, UNITS.m) * 0.9;
+    // const [areaLatitude, areaLongitude] = cellToLatLng(cell);
+    // const areaCenter = new LatLng(areaLatitude, areaLongitude);
 
-        //         if (isExcluded) return;
-                // try {
-                //     const { lat, lon } = gg.decode(geohash);
-                //     const distance = distanceBetween([areaLatitude, areaLongitude], [lat, lon]);
-                //     console.log('distance', distance * 1000, areaRadius)
-                //     if (distance * 1000 > areaRadius * 2) {
-                //         return;
-                //     }
-                // } catch {
-                //     return;
-                // }
+    // geohashes.current = [];
 
-                // const geohashPolygon = geohashToPolygonFeature(geohash, { color });
+    // const geohashRanges = geohashQueryBounds([areaLatitude, areaLongitude], areaRadius);
 
-                // const cells = polygonToCells(geohashPolygon.geometry.coordinates, 3, true);
-                // cellsToMultiPolygon(cells);
+    // const features = geohashRanges.reduce((
+    //     features: ReturnType<typeof geohashToPolygonFeature>[],
+    //     [start, end]
+    // ) => {
+    //     const geohashRanges = geohashesBetween(start, end);
+    //     // console.log('between', start, end, geohashRanges)
+    //     geohashRanges.forEach(geohash => {
+    //         if (geohashes.current.indexOf(geohash) >= 0) return;
+    //         const isExcluded = geohashRangesExcluded && geohashRangesExcluded.flat().indexOf(geohash) >= 0;
 
-                // const h3Polygons = cellsToMultiPolygon(cells);
+    //         if (isExcluded) return;
+    // try {
+    //     const { lat, lon } = gg.decode(geohash);
+    //     const distance = distanceBetween([areaLatitude, areaLongitude], [lat, lon]);
+    //     console.log('distance', distance * 1000, areaRadius)
+    //     if (distance * 1000 > areaRadius * 2) {
+    //         return;
+    //     }
+    // } catch {
+    //     return;
+    // }
 
-                // h3Polygons.forEach(polygon => {
-                //     if (geohashPolygons.current[geohash]) return;
-                //     const paths = polygon.map(loop =>
-                //         loop.map(([latitude, longitude]) => new LatLng(latitude, longitude)));
+    // const geohashPolygon = geohashToPolygonFeature(geohash, { color });
 
-                //     geohashPolygons.current[geohash] = new Polygon({
-                //         paths,
-                //         map,
-                //         strokeColor: '#fff',
-                //         strokeOpacity: 1,
-                //         strokeWeight: 2,
-                //         fillColor: color,
-                //         fillOpacity: 0.2,
-                //     })
-                // });
+    // const cells = polygonToCells(geohashPolygon.geometry.coordinates, 3, true);
+    // cellsToMultiPolygon(cells);
 
-                // console.log('point', latitude, longitude)
+    // const h3Polygons = cellsToMultiPolygon(cells);
 
-                // if (!geohashMarkers.current[geohash]) {
-                    // const point = geohashToPointFeature(geohash);
-                    // const [longitude, latitude] = point.geometry.coordinates;
-                    // const position = new LatLng(latitude, longitude);
-                    // geohashMarkers.current[geohash] = new Marker({
-                    //     map,
-                    //     label: geohash,
-                    //     position,
-                    //     icon: {
-                    //         fillOpacity: 0,
-                    //         strokeOpacity: 0,
-                    //         path: SymbolPath.CIRCLE,
-                    //     }
-                    // });
-                // }
-                // feature.
-                // geohashes.current.push(geohash);
-                // features.push(geohashPolygon);
-            // });
-            // const geohashes = getGeohashesBetweenTwoGeohashes(start, end);
-            // features.push(geohashToPolygonFeature(start, { fillOpacity: 0, fillColor: 'red' }))
-            // features.push(geohashToPolygonFeature(end, { fillOpacity: 0 }))
-            // console.log(geohashes);
-            // geohashes.forEach(geohash =>
-            //     features.push(geohashToPolygonFeature(geohash)));
-            // locationFeatures.current = locationFeatures.current?.concat(features) || features;
-        //     return features;
-        // }, []);
+    // h3Polygons.forEach(polygon => {
+    //     if (geohashPolygons.current[geohash]) return;
+    //     const paths = polygon.map(loop =>
+    //         loop.map(([latitude, longitude]) => new LatLng(latitude, longitude)));
+
+    //     geohashPolygons.current[geohash] = new Polygon({
+    //         paths,
+    //         map,
+    //         strokeColor: '#fff',
+    //         strokeOpacity: 1,
+    //         strokeWeight: 2,
+    //         fillColor: color,
+    //         fillOpacity: 0.2,
+    //     })
+    // });
+
+    // console.log('point', latitude, longitude)
+
+    // if (!geohashMarkers.current[geohash]) {
+    // const point = geohashToPointFeature(geohash);
+    // const [longitude, latitude] = point.geometry.coordinates;
+    // const position = new LatLng(latitude, longitude);
+    // geohashMarkers.current[geohash] = new Marker({
+    //     map,
+    //     label: geohash,
+    //     position,
+    //     icon: {
+    //         fillOpacity: 0,
+    //         strokeOpacity: 0,
+    //         path: SymbolPath.CIRCLE,
+    //     }
+    // });
+    // }
+    // feature.
+    // geohashes.current.push(geohash);
+    // features.push(geohashPolygon);
+    // });
+    // const geohashes = getGeohashesBetweenTwoGeohashes(start, end);
+    // features.push(geohashToPolygonFeature(start, { fillOpacity: 0, fillColor: 'red' }))
+    // features.push(geohashToPolygonFeature(end, { fillOpacity: 0 }))
+    // console.log(geohashes);
+    // geohashes.forEach(geohash =>
+    //     features.push(geohashToPolygonFeature(geohash)));
+    // locationFeatures.current = locationFeatures.current?.concat(features) || features;
+    //     return features;
+    // }, []);
 
     //     map.data.forEach((feature) => map.data.remove(feature));
 
