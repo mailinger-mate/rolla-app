@@ -1,32 +1,39 @@
 import React, { Reducer } from 'react';
-import { defaultLocation, defaultRadius as defaultRadius } from '../config';
+import { defaultCoordinates, defaultDiameter as defaultDiameter, h3GeohashRatio, h3AssetResolution, locationMaxThreshold, locationMinThreshold, h3AreaRatio, h3MaxResolution, h3MinDiameter, locationDecimals } from '../config';
 import { Geolocation } from '@capacitor/geolocation';
 import { Geohash, geohashQueryBounds, GeohashRange } from 'geofire-common';
-import { cellToLatLng, getHexagonEdgeLengthAvg, latLngToCell, UNITS } from 'h3-js';
-import { geohashesDistant } from '../utils/geohashesDistant';
+import { cellToChildren, cellToLatLng, getHexagonEdgeLengthAvg, H3Index, latLngToCell, UNITS } from 'h3-js';
+import { sortGeohashes } from '../utils/sortGeohashes';
+import { roundNewCoordinates } from '../utils/geo/roundCoordinates';
 
 export type Coordinates = [number, number];
 
-const h3Resolutions = [1100, 420, 160, 60, 20, 8, 3, 1, 0.5, 0.2, 0.1];
+const h3Resolutions = [1100, 420, 160, 60, 20, 8, 3, 1, 0.5, 0.17, 0.06, 0.02, 0.009, 0.003, 0.001];
 
-const getCellResolution = (radius: number) => {
-    let index;
-    for (index = 0; index < h3Resolutions.length; index++) {
-        if (radius / 1000 * 2 >= h3Resolutions[index]) return index;
+const areaToResolution = (diameter: number) => {
+    let resolution;
+    for (resolution = 0; resolution < h3MaxResolution; resolution++) {
+        if (diameter >= h3Resolutions[resolution]) return resolution;
     }
-    return index;
+    return resolution;
 }
 
-
-interface Circle {
+interface Point {
     coordinates: Coordinates;
-    radius: number;
 }
 
-interface Area extends Circle {
-    cellIndex: string;
-    geohashRanges: GeohashRange[];
-    geohashesExcluded: Geohash[][];
+interface Circle extends Point {
+    diameter: number;
+}
+
+interface Location extends Circle {
+    h3AssetIndex: H3Index;
+    h3Index: H3Index;
+    h3Resolution: number;
+    // geohashRanges: GeohashRange[];
+    // geohashesSorted: Geohash[][][];
+    h3RangeStart: H3Index;
+    h3RangeEnd: H3Index;
 }
 
 interface Context {
@@ -38,48 +45,131 @@ interface Context {
     // cellResolution?: number;
     // geohashRanges?: GeohashRange[];
     // geohashRangesExcluded?: string[][];
-    location: Area;
+    // cell?: Cell;
+    location: Location;
     // locationRadius?: number;
     position?: Coordinates;
-    setLocation: (location: Circle) => void;
+    // getLocation: () => Circle;
+    // getAssetCell: () => H3Index;
+    setLocation: (location: Partial<Circle>) => void;
     // setLocationRadius: (radius: number) => void;
     // setLocationBounds: (bounds: [Coordinates, Coordinates]) => void;
     // zoom: (reducer?: 'in' | 'out') => void;
     watchPosition: (track?: boolean) => void;
 }
 
-const calculateArea = (
-    state: Area | undefined,
-    area: Circle
-): Area => {
-    const { coordinates, radius } = area;
+const cellToChild = (
+    h3StartIndex: string,
+    h3Resolution: number,
+    childIndex: number,
+    // childResolution: number,
+) => {
+    return Array
+        .from(Array(h3AssetResolution - h3Resolution).keys())
+        .reduce((
+            h3Index,
+            resolution
+        ) => {
+            const cells = cellToChildren(h3Index, h3Resolution + resolution + 1);
+            return cells[childIndex < 0
+                ? cells.length + childIndex
+                : childIndex];
+        }, h3StartIndex);
+}
 
-    const cellResolution = getCellResolution(radius);
-    const cellIndex = latLngToCell(...coordinates, cellResolution);
+const cellToRange = (
+    h3Index: string,
+    h3Resolution: number,
+): [string, string] => {
+    return [
+        cellToChild(h3Index, h3Resolution, 0),
+        cellToChild(h3Index, h3Resolution, -1),
+    ];
+}
 
-    if (state && state.cellIndex === cellIndex) return state;
+const calculateLocation = ({
+    coordinates,
+    diameter,
+}: Circle): Location => {
+    const [latitude, longitude] = coordinates;
 
-    const cellRadius = getHexagonEdgeLengthAvg(cellResolution, UNITS.m);
-    const cellCenter = cellToLatLng(cellIndex);
-
-    const geohashRanges = geohashQueryBounds(cellCenter, cellRadius * 0.8);
-    const geohashesExcluded = geohashesDistant(geohashRanges, cellCenter, cellRadius);
+    const h3Resolution = areaToResolution(diameter * h3AreaRatio);
+    const h3Index = latLngToCell(latitude, longitude, h3Resolution);
+    const h3AssetIndex = latLngToCell(latitude, longitude, h3AssetResolution);
+    const [h3RangeStart, h3RangeEnd] = cellToRange(h3Index, h3Resolution);
 
     return {
-        cellIndex,
         coordinates,
-        geohashRanges,
-        geohashesExcluded,
-        radius,
+        diameter,
+        h3AssetIndex,
+        h3Index,
+        h3Resolution,
+        h3RangeStart,
+        h3RangeEnd,
     };
 }
 
+// const calculateCell = (
+//     { coordinates, diameter }: Partial<Circle>,
+//     state?: Location,
+// ): Location => {
+//     if (!coordinates && !diameter) return state;
+//     const roundedCoordinates = roundNewCoordinates(coordinates);
+//     const roundedDiameter = Math.round(diameter);
+
+//     if (state) {
+//         const [stateLatitude, stateLongitude] = state.coordinates;
+//         console.log('cell diff', stateLatitude, latitude, stateLongitude, longitude, state.diameter, diameter)
+//         if (
+//             latitude == stateLatitude
+//             && longitude === stateLongitude
+//             && diameter === state.diameter
+//         ) {
+//             return state;
+//         }
+//     }
+
+//     const h3Resolution = areaToResolution(diameter * h3AreaRatio);
+//     const h3Index = latLngToCell(latitude, longitude, h3Resolution);
+//     const h3AssetIndex = latLngToCell(latitude, longitude, h3AssetResolution);
+
+//     const h3Range = state && state.h3Index === h3Index
+//         ? state.h3Range
+//         : cellToRange(h3Index, h3Resolution);
+
+
+//     // const geohashRanges = geohashQueryBounds(h3Center, h3Radius * h3GeohashRatio);
+//     // const geohashesSorted = sortGeohashes(geohashRanges, h3Center, h3Radius);
+//     // console.log('h3Children', cellToChildren(h3Index, 9));
+
+//     // console.log('h3', diameter, h3Index, h3Resolution, h3Range);
+
+//     // console.log('sorted', JSON.stringify(geohashesSorted.map(([outside, inside]) => inside)));
+//     return {
+//         coordinates: [latitude, longitude],
+//         diameter,
+//         h3AssetIndex,
+//         h3Index,
+//         h3Resolution,
+//         // coordinates,
+//         // geohashRanges,
+//         // geohashesSorted,
+//         h3Range,
+//         // diameter,
+//     };
+// }
+
+const defaultLocation: Circle = {
+    coordinates: defaultCoordinates,
+    diameter: defaultDiameter,
+};
+
 const LocationContext = React.createContext<Context>({
-    location: calculateArea(undefined, {
-        coordinates: defaultLocation,
-        radius: defaultRadius,
-    }),
+    // cell: calculateCell(defaultLocation),
+    location: calculateLocation(defaultLocation),
+    // getAssetCell: () => latLngToAssetCell(defaultCoordinates),
     setLocation: () => undefined,
+    // getLocation: () => defaultLocation,
     // setLocationRadius: () => undefined,
     // zoom: () => undefined,
     watchPosition: () => undefined,
@@ -105,7 +195,6 @@ const useDifferent = (
 // interface LocationState extends Loco {
 
 // }
-
 
 const LocationProvider = React.memo(({ children }) => {
     const [position, setPosition] = React.useReducer(useDifferent, undefined);
@@ -232,22 +321,49 @@ const LocationProvider = React.memo(({ children }) => {
     //     if (isOutside) setArea(location);
     // }, [area, areaRadius, location]);
 
-    const [location, setLocation] = React.useReducer<Reducer<Area, Circle>>((
-        state,
-        area
-    ) => {
-        if (state) {
-            const { radius } = state;
-            const isLarger = area.radius > radius * 2 / 3;
-            const isSmaller = area.radius < radius / 3;
-            if (!isSmaller && !isLarger) return state;
-        }
+    // const [location, setLocation] = React.useState<Circle>({
+    //     coordinates: defaultCoordinates,
+    //     diameter: defaultDiameter,
+    // });
 
-        return calculateArea(state, area);
-    }, calculateArea(undefined, {
-        coordinates: defaultLocation,
-        radius: defaultRadius,
-    }));
+    const [location, setLocation] = React.useReducer<
+        Reducer<Location, Partial<Circle>>,
+        Circle
+    >(
+        (
+            state,
+            { coordinates: coordinatesAfter, diameter: diameterAfter }
+        ) => {
+            if (!coordinatesAfter && !diameterAfter) return state;
+
+            const {
+                coordinates: coordinatesBefore,
+                diameter: diameterBefore,
+            } = state;
+            const coordinates = roundNewCoordinates(coordinatesBefore, coordinatesAfter);
+            const diameter = diameterAfter && Math.round(diameterAfter);
+            if (!coordinates && !diameter) return state;
+
+            return calculateLocation({
+                coordinates: coordinates || coordinatesBefore,
+                diameter: diameter || diameterBefore,
+            });
+        },
+        {
+            coordinates: defaultCoordinates,
+            diameter: defaultDiameter,
+        },
+        calculateLocation,
+    );
+
+    // const getAssetCell = React.useCallback(() => {
+    //     return latLngToAssetCell(location.coordinates);
+    // }, [location]);
+
+
+    // React.useEffect(() => {
+    //     setCell(location);
+    // }, [location]);
 
     // React.useEffect(() => {
     //     if (!location || !locationRadius) return;
@@ -318,6 +434,10 @@ const LocationProvider = React.memo(({ children }) => {
         });
     }, []);
 
+    const getLocation = React.useCallback(() => {
+        return location;
+    }, [location]);
+
     React.useEffect(clearWatch, []);
 
     // const zoom = React.useCallback((out = false) => {
@@ -332,17 +452,20 @@ const LocationProvider = React.memo(({ children }) => {
         // cellIndex,
         // cellRadius,
         // cellResolution,
+        // cell,
         location,
         // locationRadius,
         // geohashRanges,
         // geohashRangesExcluded,
         position,
+        // getLocation,
         setLocation,
         // setLocationBounds,
         // setLocationRadius,
         // zoom,
         watchPosition,
     }), [
+        // cell,
         // area,
         // areaRadius,
         // cell,

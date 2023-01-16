@@ -1,25 +1,47 @@
 import React from 'react';
+import { h3SetToFeatureCollection, h3ToFeature } from 'geojson2h3';
 import { useGoogleMapContext } from '../../contexts/GoogleMap';
-import { useLocationContext } from '../../contexts/Location';
+import { Coordinates, useLocationContext } from '../../contexts/Location';
 import { useVehicleContext } from '../../contexts/Vehicle';
 import { Vehicle } from '../../utils/db/vehicle';
-import { styleMap } from '../../utils/map/style';
-import { distanceBetween } from 'geofire-common';
-import { cellToBoundary, cellToLatLng, getResolution, gridDisk, H3Index } from 'h3-js';
+import { high1, high5, low, styleMap, warning } from '../../utils/geo/style';
+import { cellToBoundary, cellToLatLng, greatCircleDistance, gridDisk, UNITS } from 'h3-js';
+import { Feature } from 'geojson';
+import { prefersColorDarkMedia } from '../../utils/prefersColor';
 import './Map.css';
-import { Feature, FeatureCollection } from 'geojson';
-import { km } from '../../utils/distance';
+import { h3RingSize, locationDebounce } from '../../config';
+import { CreateAnimation, IonFab, IonFabButton, IonIcon } from '@ionic/react';
+import { locateOutline } from 'ionicons/icons';
+
 
 export interface View {
     center?: string[] | boolean;
     padding?: number;
 }
 
+const assetCellId = 'assetCell';
+
+const zoomRange = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] as const;
+
+export enum MarkerColor {
+    Primary = 'lightgreen',
+    Warning = 'tomato',
+    Disabled = 'lightgrey'
+}
+
 interface Props {
     // center?: string[];
     // filter?: boolean;
     // padding?: number;
+    aggregate?: boolean;
+    assetCell?: boolean;
+    center?: Coordinates;
+    grid?: boolean;
+    height?: string;
+    live?: boolean;
+    centerMarker?: MarkerColor;
     view?: View;
+    zoom?: typeof zoomRange[number];
     // onBlur?: () => void;
     onClick?: () => void;
     onFocus?: (id: string) => void;
@@ -27,6 +49,8 @@ interface Props {
     onDrag?: () => void;
 }
 
+const animationFramerate = 1 / 20;
+const cellCenterId = 'Center';
 const pinPath = 'm24 12c-0.19 3.3-1.8 6.3-3.2 9.3-2.6 5.1-5.6 10-8.8 15-4-5.9-7.8-12-11-19-1.1-2.5-1.8-5.3-1.1-8.1 1.1-5.3 6.3-9.4 12-9.3 5.4-0.1 11 4 12 9.3 0.21 0.89 0.31 1.8 0.31 2.7z';
 
 const vehicleCount = (
@@ -40,126 +64,113 @@ const vehicleCount = (
     }, 0);
 }
 
-const randomColor = (lightness: number) => {
+const randomColor = () => {
     const goldenAngle = 180 * (3 - Math.sqrt(5));
-    return `hsl(${Math.random() * 10 * goldenAngle + 60}, 100%, ${Math.round(lightness * 100)}%)`;
+    return `hsl(${Math.random() * 10 * goldenAngle + 60}, 100%, ${Math.round(Math.random() * 100)}%)`;
 };
 
-const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const cellColor = (
+    count?: number,
+    max?: number
+) => {
+    if (!count || !max) return;
+    return `hsl(120deg, ${Math.max(Math.round(count / max * 100), 10)}%, 50%)`;
+};
 
-const StationMap = React.memo<Props>(({
+const noSymbol: google.maps.Icon = {
+    // fillOpacity: 0,
+    // strokeOpacity: 0,
+    // path: 2,
+    url: '/assets/1x1.gif'
+};
+
+const positionSymbol: google.maps.Symbol = {
+    path: 2,
+    fillColor: 'royalblue',
+    fillOpacity: 1,
+    strokeWeight: 10,
+    strokeOpacity: 0.2,
+    scale: 5,
+    strokeColor: 'royalblue',
+};
+
+const Map = React.memo<Props>(({
+    aggregate,
+    assetCell,
+    grid = true,
+    height = '100%',
+    centerMarker,
+    live = true,
     view,
+    zoom,
     onClick,
     onFocus,
     onDrag,
+    ...props
 }) => {
-    const {
-        // area,
-        // cell,
-        // cellIndex,
-        // cellRadius,
-        // area,
-        // ar   eaRadius,
-        location,
-        // locationRadius,
-        // geohashRanges,
-        // geohashRangesExcluded,
-        position,
-        setLocation,
-        // setLocationRadius,
-    } = useLocationContext();
+    const { location, position, setLocation } = useLocationContext();
     // const { stations } = useStationContext();
-    const { vehicles, vehiclesCount } = useVehicleContext();
+    const { vehicles, vehiclesAggregate } = useVehicleContext();
     const googleMaps = useGoogleMapContext();
-
-    // console.log('map');
-    // console.log('stations', stations, vehicles);
 
     const [map, setMap] = React.useState<google.maps.Map>();
     const mapRef = React.useRef<HTMLDivElement>(null);
+
+    const centerMarkerRef = React.useRef<google.maps.Marker>();
     const positionMarker = React.useRef<google.maps.Marker>();
 
-    // const [focus, setFocus] = React.useState<'position' | 'view'>();
-    // const focus = React.useRef<'position' | 'center'>();
+    const [prefersColorDark, setPrefersColorDark] = React.useState(prefersColorDarkMedia.matches);
 
-    const cellMarkers = React.useRef<Record<H3Index, google.maps.Marker>>({});
-    // const cellPolygons = React.useRef<Record<H3Index, google.maps.Polygon>>({});
+    const [center, setCenter] = React.useState(props.center);
 
-    // const [cellMax, setCellMax] = React.useReducer((
-    //     max: number,
-    //     count: number,
-    // ) => {
-    //     return count > max ? count : max;
-    // }, 0);
-
+    const { coordinates, h3AssetIndex } = location;
 
 
     // React.useEffect(() => {
-    //     if (!map || !cellMax) return;
+    //     if (live) setCenter(location.coordinates);
+    // }, [live, location.coordinates]);
 
-    //     map.data.forEach(feature => {
-    //         const count = feature.getProperty('count');
-    //         const fillColor = cellColor(count);
-    //         map.data.overrideStyle(feature, {
-    //             fillColor,
-    //         });
+    // const { h3Index, h3Resolution } = location;
+
+    // window.fetch('https://ipapi.co/json/', { cache: 'force-cache' }).then(response => {
+    //     response.json().then(({ latitude, longitude }: IPRegion) => {
+    //         if (!latitude || !longitude || location !== defaultRegion) return;
+    //         map.setCenter(new LatLng(latitude, longitude));
     //     });
-    // }, [map, cellMax]);
+    // });
 
-    const cellMax = React.useRef<number>(0);
-    const cellColor = (count: number) => {
-        // return '#' + Math.floor(Math.random()*16777215).toString(16);
-        console.log('cellColor', count, cellMax.current)
-        return `hsl(120deg, ${Math.max(Math.round(count / cellMax.current * 100), 10)}%, 50%)`;
-    };
+    React.useEffect(() => {
+        const listener = (event: MediaQueryListEvent) => setPrefersColorDark(event.matches);
+        prefersColorDarkMedia.addEventListener('change', listener);
+        return () => prefersColorDarkMedia.removeEventListener('change', listener);
+    });
 
-    const cellResolution = React.useRef<number>(0);
+    // const countMax = React.useRef<number>(0);
+    // const resolution = React.useRef<number>(0);
     // const cells = React.useRef<string[]>([]);
 
     React.useEffect(() => {
-        console.log('position', position);
         if (!googleMaps || !position) return;
-        const { LatLng } = googleMaps;
-        const [latitude, longitude] = position;
-        positionMarker.current?.setPosition(new LatLng(latitude, longitude));
-    }, [googleMaps, position])
-
-    const positionSymbol = React.useMemo(() => {
-        if (!googleMaps) return;
-        const { SymbolPath } = googleMaps;
-        const symbol: google.maps.Symbol = {
-            path: SymbolPath.CIRCLE,
-            fillColor: 'royalblue',
-            fillOpacity: 1,
-            strokeWeight: 10,
-            strokeOpacity: 0.2,
-            scale: 5,
-            strokeColor: 'royalblue',
-        };
-        return symbol;
-    }, [googleMaps]);
-
+        positionMarker.current?.setPosition(new googleMaps.LatLng(...position));
+    }, [googleMaps, position]);
 
     const [isZooming, setZooming] = React.useState(false);
-
+    console.log('renderMap')
     React.useEffect(() => {
-        console.log('mapRef', mapRef.current, googleMaps)
         if (!googleMaps || !mapRef.current) return;
-        const { Map, Marker, LatLng, Point, Animation } = googleMaps;
-
-        const { coordinates: [latitude, longitude], radius } = location;
-        const center = new LatLng(latitude, longitude);
-
-        const map = new Map(mapRef.current, {
-            center,
-            zoom: 13,
-            maxZoom: 16,
+        const { Circle, Map, Marker, LatLng, LatLngBounds, Animation } = googleMaps;
+        console.log('map', zoom, mapRef.current);
+        const map = new google.maps.Map(mapRef.current, {
+            center: center && new LatLng(...center),
+            draggable: live,
+            zoom,
+            maxZoom: zoomRange[zoomRange.length - 1],
             // zoom: 6,
-            minZoom: 4,
+            minZoom: zoomRange[0],
             disableDefaultUI: true,
-            styles: styleMap(prefersDark),
+            styles: styleMap(prefersColorDark),
             keyboardShortcuts: false,
-            backgroundColor: 'transparent',
+            backgroundColor: high5(prefersColorDark)
             // gestureHandling: 'cooperative',
             // restriction: {
             //     latLngBounds: {
@@ -171,67 +182,100 @@ const StationMap = React.memo<Props>(({
             // }
         });
 
-        // map.data.setStyle({
-        //     strokeColor: '#ddd',
-        //     strokeWeight: 1,
-        //     fillOpacity: 0,
-        // });
+        if (!center) {
+            const [lat, lng] = location.coordinates;
+            const circle = new Circle({
+                center: { lat, lng },
+                radius: location.diameter / 2 * 1000,
+            });
+            const bounds = new LatLngBounds(circle.getBounds())
+            map.fitBounds(bounds);
+        }
 
         map.data.setStyle((feature) => {
-            const count = feature.getProperty('count');
-            if (feature.getGeometry()?.getType() === 'Point') {
+            console.log('setStyle');
+            const label = feature.getProperty('label');
+
+            if (label || label === 0) {
+                // return {};
                 return {
                     icon: noSymbol,
-                    label: '' + count,
-                    opacity: count ? 1 : 0,
-                    zIndex: 10,
+                    label: {
+                        text: '' + label,
+                        color: low(prefersColorDark),
+                        className: 'cellLabel',
+                        fontSize: '2.5vmin',
+                    },
+                    opacity: label > 0 ? 1 : 0,
+                    zIndex: 5,
                 };
             }
-
-            const fillColor = cellColor(count);
-
+            const count = feature.getProperty('count');
+            const max = feature.getProperty('max');
+            const isAssetCell = feature.getId() === assetCellId;
+            // const color = feature.getProperty('color');
+            // if (color) return {
+            //     fillColor: color === 'inside'
+            //         ? 'lightgreen'
+            //         : color === 'outside'
+            //             ? 'tomato'
+            //             : color,
+            //     fillOpacity: 0.2,
+            //     strokeWeight: 2,
+            //     strokeColor: 'lightgrey',
             return {
-                strokeColor: '#fff',
-                strokeWeight: 2,
+                strokeColor: (isAssetCell ? warning() : high1(prefersColorDark)) + 'aa',
+                strokeWeight: 1.5,
                 strokeOpacity: 1,
                 fillOpacity: count ? 0.2 : 0,
-                fillColor,
-                zIndex: 3,
-            }
+                fillColor: cellColor(count, max),
+                zIndex: isAssetCell ? 2 : 1,
+            };
         });
-
-        // map.data.addListener('addfeature', (event: google.maps.Data.AddFeatureEvent) => {
-        //     const count = event.feature.getProperty('count');
-        // });
 
         map.addListener('click', () => {
             onClick && onClick();
-        })
+        });
 
-        map.addListener('idle', () => {
-            const bounds = map.getBounds();
-            const center = bounds?.getCenter();
-            if (!bounds || !center) return;
+        let locationTimeout: number | null;
 
-            const coordinates: [number, number] = [center.lat(), center.lng()];
-            const northEast = bounds?.getNorthEast();
-            const southWest = bounds?.getSouthWest();
-            const radius = Math.ceil(
-                distanceBetween(
+        // map.addListener('bounds_changed', () => {
+        //     if (!locationTimeout) return;
+        //     window.clearTimeout(locationTimeout);
+        //     locationTimeout = null;
+        // });
+
+        map.addListener('bounds_changed', () => {
+            if (locationTimeout) window.clearTimeout(locationTimeout);
+            locationTimeout = window.setTimeout(() => {
+                locationTimeout = null;
+                const bounds = map.getBounds();
+                const center = bounds?.getCenter();
+                if (!bounds || !center) return;
+
+                const coordinates: [number, number] = [center.lat(), center.lng()];
+                const northEast = bounds?.getNorthEast();
+                const southWest = bounds?.getSouthWest();
+                const diameter = greatCircleDistance(
                     [northEast.lat(), northEast.lng()],
-                    [southWest.lat(), southWest.lng()]
-                ) / 20
-            ) * 2 * km;
-            console.log('idle', radius);
-            setLocation({
-                coordinates,
-                radius
-            });
+                    [southWest.lat(), southWest.lng()],
+                    UNITS.km
+                );
+                console.log('idle', coordinates, diameter)
+                setLocation({
+                    coordinates,
+                    diameter
+                });
+            }, locationDebounce);
         });
 
         map.addListener('dragend', () => {
             onDrag && onDrag();
         });
+
+        // map.data.addListener('setproperty', (event: google.maps.Data.SetPropertyEvent) => {
+        //     event.feature.
+        // });
 
         // map.addListener('center_changed', () => {
         //     console.log('center cahnged');
@@ -247,13 +291,13 @@ const StationMap = React.memo<Props>(({
         //         [northEast.lat(), northEast.lng()],
         //         [southWest.lat(), southWest.lng()]
         //     ])
-        // })
+        // });
 
         setMap(map);
 
         positionMarker.current = new Marker({
             map,
-            position: new LatLng(latitude, longitude),
+            // position: new LatLng(latitude, longitude),
             // label: count ? count.toString() : '?',
             animation: Animation.DROP,
             icon: positionSymbol
@@ -262,7 +306,93 @@ const StationMap = React.memo<Props>(({
         // return map;
 
         // new Marker().setValues()
-    }, [googleMaps, mapRef]);
+    }, [googleMaps, mapRef, prefersColorDark]);
+
+    // React.useEffect(() => {
+    //     if (!center || !googleMaps || !map) return;
+    //     const [lat, lng] = center;
+    //     console.log('setCenter')
+    //     // map.setCenter({ lat, lng });
+    // }, [center, googleMaps, map]);
+
+    React.useEffect(() => {
+        if (!map || !center || !live) return;
+        // const center = map.getCenter();
+        const [latCenter, lngCenter] = center;
+        const [lat, lng] = coordinates;
+        if (lat === latCenter && lng == lngCenter) return;
+        console.log('setCenter', lat, latCenter, lng, lngCenter);
+        setCenter([lat, lng]);
+        map.setCenter({ lat, lng });
+    }, [center, coordinates, live, map]);
+
+    const pinSymbol = React.useCallback((color?: boolean | string) => {
+        if (!googleMaps) return;
+        const { Point } = googleMaps;
+        const anchor = new Point(12, 36);
+        const labelOrigin = new Point(12, 12);
+        const symbol: google.maps.Symbol = {
+            anchor,
+            fillColor: color === true ? 'lightgreen' : color || 'lightgrey',
+            fillOpacity: 1,
+            labelOrigin,
+            path: pinPath,
+            strokeWeight: 1,
+            strokeOpacity: 0.2
+        };
+        return symbol;
+    }, [googleMaps]);
+
+
+
+    React.useEffect(() => {
+        if (!map) return;
+        const feature = map.data.getFeatureById(assetCellId);
+        if (feature) map.data.remove(feature);
+        if (!assetCell) return;
+        const polygon = cellToBoundary(h3AssetIndex, true);
+        const assetFeature: Feature = {
+            type: 'Feature',
+            id: assetCellId,
+            geometry: {
+                type: 'Polygon',
+                coordinates: [polygon],
+            },
+            properties: {}
+        };
+        // console.log('assetFeature', assetFeature);
+        map.data.addGeoJson(assetFeature);
+    }, [
+        assetCell,
+        h3AssetIndex,
+        map,
+    ]);
+
+    React.useEffect(() => {
+        if (!center || !googleMaps || !map) return;
+        if (!centerMarker) {
+            centerMarkerRef.current?.setMap(null);
+            centerMarkerRef.current = undefined;
+            return;
+        }
+        const { LatLng, Marker } = googleMaps;
+        if (!centerMarkerRef.current) {
+            centerMarkerRef.current = new Marker({
+                map,
+                position: new LatLng(...center),
+                // label: count ? count.toString() : '?',
+                // animation: Animation.DROP,
+                icon: pinSymbol(centerMarker)
+            });
+            return;
+        }
+        centerMarkerRef.current.setPosition(new LatLng(...location.coordinates));
+    }, [
+        center,
+        centerMarker,
+        googleMaps,
+        map,
+    ]);
 
     // const geohashPolygon = React.useCallback((geohash: string) => {
     //     if (!googleMaps) return;
@@ -283,8 +413,8 @@ const StationMap = React.memo<Props>(({
     // const geohashes = React.useRef<Geohash[]>([]);
     // const locationFeatures = React.useRef<FeatureCollection>();
 
-    const geohashMarkers = React.useRef<Record<string, google.maps.Marker>>({});
-    const geohashPolygons = React.useRef<Record<string, google.maps.Polygon>>({});
+    // const geohashMarkers = React.useRef<Record<string, google.maps.Marker>>({});
+    // const geohashPolygons = React.useRef<Record<string, google.maps.Polygon>>({});
 
     // const [bounds, setBounds] = React.useState<GeohashRange[]>();
 
@@ -323,12 +453,20 @@ const StationMap = React.memo<Props>(({
     // }, [googleMaps, map, bounds, location]);
 
     // React.useEffect(() => {
-    //     if (!vehicleCount) return;
-
-    //     for (const geohashRange in vehiclesCount) {
-    //         const count = vehiclesCount[count];
+    //     if (!map || !vehiclesAggregate) return;
+    //     console.log('vehilcesCount', vehiclesAggregate); 
+    //     for (const geohashRange in vehiclesAggregate) {
+    //         const count = vehiclesAggregate[geohashRange];
+    //         if (!count) continue;
+    //         const polygon = map.data.getFeatureById(geohashRange);
+    //         const point = map.data.getFeatureById(geohashRange + centerId);
+    //         if (cellMax.current < count) cellMax.current = count;
+    //         console.log('setProperty', count, cellMax.current, polygon, point)
+    //         polygon?.setProperty('count', count);
+    //         polygon?.setProperty('max', cellMax.current);
+    //         point?.setProperty('count', count);
     //     }
-    // }, [vehiclesCount]);
+    // }, [map, vehiclesAggregate]);
 
     // const areaCircle = React.useRef<google.maps.Circle>();
 
@@ -371,143 +509,164 @@ const StationMap = React.memo<Props>(({
 
     // }, [map, cellIndex]);
 
-    const noSymbol = React.useMemo(() => {
-        if (!googleMaps) return;
-        const { SymbolPath } = googleMaps;
-        const symbol: google.maps.Symbol = {
-            fillOpacity: 0,
-            strokeOpacity: 0,
-            path: SymbolPath.CIRCLE,
-        };
-        return symbol;
-    }, [googleMaps]);
-
     // const max = Math.random() * 50;
 
+    // const cellsRef = React.useRef<string>();
+
+    // const [resolution, setResolution] = React.useState<number>();
+
+    // React.useEffect(() => {
+    //     if 
+    //     setResolution(cell?.h3Resolution);
+    // }, [cell, resolution])
 
     React.useEffect(() => {
-        if (!location || !googleMaps || !map) return;
-
-        const { Data, LatLng, Marker } = googleMaps;
+        if (!googleMaps || !map) return;
+        // const { Data, LatLng, Marker } = googleMaps;
         // const { Polygon } = Data;
-        const { cellIndex } = location;
-        const disk = gridDisk(cellIndex, 3);
 
-        // let countMax = 0;
-        // const counts = disk.map(() => {
-        //     const count = Math.round(Math.random() * 10);
-        //     if (countMax < count) countMax = count;
-        //     return count;
-        // });
+        console.log('draw cells', location);
+        // if (cell?.h3Resolution !== resolution) {
+        //     map.data.forEach(feature => map.data.remove(feature));
+        //     if (!cell) return;
+        //     countMax.current = 0;
+        // }
 
-        const resolution = getResolution(cellIndex);
+        // setResolution(cell?.h3Resolution);
+        map.data.forEach(feature => {
+            const resolution = feature.getProperty('resolution');
+            if (!resolution) return;
+            if (grid && location.h3Resolution === resolution) return;
+            console.log('removeCell');
+            map.data.remove(feature);
 
-        if (cellResolution.current !== resolution) {
-            map.data.forEach(feature => map.data.remove(feature));
-            cellResolution.current = resolution;
-            cellMax.current = 0;
-        }
+            // map.data.remove(feature);
+            // let opacity = 1;
+            // // if (feature.getProperty('hidden')) return;
+            // const interval = setInterval(() => {
+            //     opacity -= 0.2;
+            //     map.data.overrideStyle(feature, {
+            //         strokeOpacity: opacity,
+            //     });
+            //     // console.log('opacity', opacity)
+            //     if (opacity > 0) return;
+            //     console.log('removeCell');
+            //     clearInterval(interval);
+            //     // feature.setProperty('hidden', true);
+            //     map.data.remove(feature);
+            // }, 1 / 60 / 2);
+        });
 
-        const polygons: FeatureCollection = {
+
+        if (!grid) return;
+
+        map.data.addGeoJson({
             type: 'FeatureCollection',
-            features: disk.reduce((
+            features: gridDisk(location.h3Index, h3RingSize).reduce((
                 features: Feature[],
-                cellIndex,
-                index
+                h3Index,
             ) => {
-                const feature = map.data.getFeatureById(cellIndex);
-                if (feature) {
-                    const max: number = feature.getProperty('max');
-                    if (max < cellMax.current) {
-                        console.log('max', max, '->', cellMax.current)
-                        const count: number = feature.getProperty('count');
-                        const fillColor = cellColor(count);
-                        feature.setProperty('max', cellMax.current);
-                        map.data.overrideStyle(feature, {
-                            fillColor,
-                        });
-                    }
-                    return features;
-                }
-                // if (cellPolygons.current[h3Index]) return;
-                // if (cells.current.indexOf(h3Index) >= 0) return polygons;
-                const polygon = cellToBoundary(cellIndex, true);
-                const [latitude, longitude] = cellToLatLng(cellIndex);
-                // const resolution = getResolution(h3Index);
-                // const paths = points.map(([latitude, longitude]) => new LatLng(latitude, longitude));
-                // const position = new LatLng(...point);
-                const count = Math.round(Math.random() * 3);
-                // const fillColor = `hsl(120deg, ${Math.max(Math.round(count / countMax * 100), 10)}%, 50%)`;
-                // console.log('color', fillColor);
-                if (count > cellMax.current) {
-                    console.log('new max', count);
-                    cellMax.current = count * 2;
-                }
-                // setCellMax(count);
-                // cells.current.push(h3Index);
+                // const count = vehiclesAggregate.cells[cellIndex] || 0;
+                // console.log(cellIndex, count)
+                // if (!count) return features;
+                // if (count > countMax.current) countMax.current = count;
+
+                const feature = map.data.getFeatureById(h3Index);
+                if (feature) return features;
+                // if (cellFeature) {
+                //     const labelFeature = map.data.getFeatureById(cellIndex + cellCenterId);
+                //     const featureCount: number = cellFeature.getProperty('count') || 0;
+                //     const featureMax: number = cellFeature.getProperty('max') || 0;
+
+                //     if (count !== featureCount) {
+                //         cellFeature.setProperty('count', count);
+                //         labelFeature?.setProperty('count', count);
+                //     }
+
+                //     if (count && featureMax < countMax.current) {
+                //         cellFeature.setProperty('max', countMax.current);
+                //     }
+
+                //     return features;
+                // }
+
+                const polygon = cellToBoundary(h3Index, true);
+                const [latitude, longitude] = cellToLatLng(h3Index);
+                const resolution = location.h3Resolution;
+
                 features.push({
                     type: 'Feature',
-                    id: cellIndex,
+                    id: h3Index,
                     geometry: {
                         type: 'Polygon',
                         coordinates: [polygon],
                     },
                     properties: {
-                        count,
-                        max: cellMax.current,
+                        // count,
+                        // max: vehiclesAggregate.max,
+                        h3Index,
                         resolution,
                     }
                 });
 
                 features.push({
                     type: 'Feature',
+                    // id: cellIndex + cellCenterId,
                     geometry: {
                         type: 'Point',
                         coordinates: [longitude, latitude],
                     },
                     properties: {
-                        count,
+                        h3Index,
+                        label: 0,
                         resolution,
                     },
                 })
-                //cellPolygons.current[h3Index] =
-                // polygons.push({
-                //     type: "Feature",
-                //     geometry: {
-                //         ty
-                //     }
-                //     // new Polygon({
-                //     //     paths,
-                //     //     strokeColor: prefersDark ? '#444' : '#ddd',
-                //     //     strokeWeight: 1,
-                //     //     strokeOpacity: 0, // count ? 1 : 0,
-                //     //     fillOpacity: count ? Math.random() / 5 : 0,
-                //     //     fillColor,
-                //     //     // map,
-                //     //     zIndex: 2
-                //     // })
-                // });
-                // cellMarkers.current[h3Index] = new Marker({
-                //     icon: noSymbol,
-                //     label: {
-                //         text: '' + count,
-                //         fontSize: '2vmax',
-                //         className: 'cellLabel',
-                //         color: prefersDark ? '#ddd' : '#777'
-                //     },
-                //     opacity: count ? 1 : 0,
-                //     map,
-                //     optimized: true,
-                //     position,
-                //     // fillC
-                //     zIndex: 1,
-                // });
                 return features;
             }, [])
-        };
+        });
 
-        map.data.addGeoJson(polygons);
+        // console.log('features', map.data
 
+        // map.data.addGeoJson(
+        //     wrapAsFeatureCollection(
+        //         location.geohashesSorted.reduce((
+        //             features: Feature[],
+        //             [outside, inside],
+        //         ) => {
+        //             outside.forEach(geohash => features.push(geohashToPolygonFeature(geohash, { color: 'outside' })));
+        //             inside.forEach(geohash => features.push(geohashToPolygonFeature(geohash, { color: 'inside' })));
+        //             return features;
+        //         }, [])
+        //     )
+        // );
+
+        // if (cellsRef.current === cellIndex) return;
+
+        // const startCell = cellToChildren(cellIndex, cellResolution + 1)
+        // const children1 = cellToChildren('85658e97fffffff', 9)
+        // const children2 = cellToChildren(children1[0], cellResolution + 2);
+        // const children3 = cellToChildren(children2[1], cellResolution + 3);
+        // console.log('start/end', location.h3Range);
+        // console.log('cellsBetwen', cellsBetween(startCell, endCell, 4))
+
+        // const color = randomColor();
+        // // const cells = cellsBetween(startCell, endCell, 4);
+        // map.data.addGeoJson(
+        //     h3SetToFeatureCollection(
+        //         cellsBetween(...location.h3Range, 4),
+        //         () => ({ color })
+        //     )
+        // );
+
+
+        // cellsRef.current = cellIndex;
+        // map.data.addGeoJson(h3SetToFeatureCollection(grandChildren));
+        // map.data.addGeoJson(h3SetToFeatureCollection([
+        //     '8765812c7ffffff',
+        //     '8765812c8ffffff',
+        //     '8765812c9ffffff',
+        // ]))
         // map.data.forEach(feature => {
         //     const cellResolution: number = feature.getProperty('resolution');
 
@@ -524,7 +683,43 @@ const StationMap = React.memo<Props>(({
         //     cellResolution.current = resolution;
         //     cells.current = [];
         // }
-    }, [location, googleMaps, map]);
+    }, [
+        googleMaps,
+        grid,
+        location,
+        map,
+    ]);
+
+    React.useEffect(() => {
+        if (!map || !aggregate || !grid) return;
+        map.data.forEach(feature => {
+            const featureLabel = feature.getProperty('label');
+            const h3Index = feature.getProperty('h3Index');
+            const count = vehiclesAggregate.cells[h3Index] || 0;
+            if (featureLabel || featureLabel === 0) {
+                if (featureLabel === count) return;
+                console.log('setLabel', count);
+                feature.setProperty('label', count);
+                // map.data.overrideStyle(feature, {
+                //     opacity: count ? 1 : 0,
+                // })
+
+                return;
+            }
+
+            const featureCount = feature.getProperty('count');
+            const featureMax = feature.getProperty('max');
+            const max = vehiclesAggregate.max;
+            if (featureCount !== count) feature.setProperty('count', count);
+            if (featureMax !== max) feature.setProperty('max', max);
+
+        });
+    }, [
+        aggregate,
+        grid,
+        map,
+        vehiclesAggregate,
+    ]);
 
     // React.useEffect(() => {
     //     if (!cellIndex) return;
@@ -774,22 +969,6 @@ const StationMap = React.memo<Props>(({
         // setFocus('view');
     }, [googleMaps, map]);
 
-    const pinSymbol = React.useCallback((count?: number) => {
-        if (!googleMaps) return;
-        const { Point } = googleMaps;
-        const anchor = new Point(12, 46);
-        const labelOrigin = new Point(12, 12);
-        const symbol: google.maps.Symbol = {
-            anchor,
-            fillColor: count ? 'lightgreen' : 'lightgrey',
-            fillOpacity: 1,
-            labelOrigin,
-            path: pinPath,
-            strokeWeight: 1,
-            strokeOpacity: 0.2
-        };
-        return symbol;
-    }, [googleMaps]);
 
     React.useEffect(() => {
         if (!googleMaps || !map) return;
@@ -827,7 +1006,7 @@ const StationMap = React.memo<Props>(({
                 position,
                 label: count ? count.toString() : '?',
                 animation: Animation.DROP,
-                icon: pinSymbol(count)
+                icon: pinSymbol(true)
             });
 
             if (onFocus) {
@@ -868,22 +1047,49 @@ const StationMap = React.memo<Props>(({
         // focus(view);
     }, [googleMaps, map, vehicles, view]);
 
+    const locateAnimationRef = React.createRef<CreateAnimation>();
+
     // const focus = React.useCallback(())
+    const locateButton = React.useMemo(() => {
+        return (
+            <IonFabButton
+                // color={isLocated ? 'light' : 'medium'}
+                color="medium"
+                size="small"
+            // onClick={locate}
+            >
+                <CreateAnimation
+                    ref={locateAnimationRef}
+                    duration={1000}
+                    iterations={Infinity}
+                    fromTo={{
+                        property: 'opacity',
+                        fromValue: '1',
+                        toValue: '0.5'
+                    }}
+                >
+                    <IonIcon icon={locateOutline} />
+                </CreateAnimation>
+            </IonFabButton>
+        );
+    }, []);
 
     return (
-        <div
-            ref={mapRef}
-            role="application"
-            style={{
-                width: '100%',
-                height: '100%'
-            }}
-        />
+        <div className="mapContainer" style={{ height }}>
+            <div
+                ref={mapRef}
+                role="application"
+                className="map"
+            />
+            <IonFab vertical="bottom" horizontal="end">
+                {locateButton}
+            </IonFab>
+        </div>
     )
 });
 
-StationMap.displayName = 'StationMap';
+Map.displayName = 'Map';
 
 export {
-    StationMap
+    Map
 };

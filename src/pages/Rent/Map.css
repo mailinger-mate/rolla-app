@@ -10,3 +10,7 @@ ion-fab-button {
 ion-toolbar ion-buttons.sc-ion-buttons-ios-h {
     align-self: center;
 } */
+
+.gm-style {
+    z-index: auto !important;
+}

@@ -15,7 +15,10 @@ const GoogleMapProvider = React.memo(({ children }) => {
     const [context, setContext] = React.useState<typeof google.maps | undefined>();
 
     React.useEffect(() => {
-        loader.then(googleMaps => setContext(googleMaps));
+        loader.then(googleMaps => {
+            console.log('gMaps', googleMaps.version);
+            setContext(googleMaps)
+        });
     }, []);
 
     return (

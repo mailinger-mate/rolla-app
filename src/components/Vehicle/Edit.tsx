@@ -52,7 +52,7 @@ const VehicleEdit = React.memo<Props>(({
         // if (security) setSecurity(security.id);
     }, [])
 
-    const submit: SubmitHandler<Form> = ({ name, model, licenseId }) => {
+    const saveVehicle: SubmitHandler<Form> = ({ name, model, licenseId }) => {
         // console.log('state', formState.errors, formState.dirtyFields);
         console.log(name, model, licenseId);
         // const geohash = geohashForLocation([location.latitude, location.longitude]);
@@ -74,7 +74,7 @@ const VehicleEdit = React.memo<Props>(({
                     </IonButtons>
                     <IonTitle>{id ? 'Edit' : 'Add'} Vehicle</IonTitle>
                     <IonButtons slot="end">
-                        <IonButton color="secondary" onClick={handleSubmit(submit)}>
+                        <IonButton color="secondary" onClick={handleSubmit(saveVehicle)}>
                             Save
                         </IonButton>
                     </IonButtons>
@@ -82,9 +82,9 @@ const VehicleEdit = React.memo<Props>(({
             </IonHeader>
             <IonContent className="ion-padding">
                 <IonList>
-                    {input<Form>('Name', register('name'))}
-                    {input<Form>('Model', register('model'))}
-                    {input<Form>('License', register('licenseId'))}
+                    {input<Form>({ label: 'Name' }, register('name'))}
+                    {input<Form>({ label: 'Model' }, register('model'))}
+                    {input<Form>({ label: 'License' }, register('licenseId'))}
                 </IonList>
             </IonContent>
         </>

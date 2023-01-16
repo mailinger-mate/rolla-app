@@ -1,9 +1,28 @@
 import { dayMs } from "./utils/datetime";
 
-export const defaultLocation: [number, number] = [50, 10]; // [11.82, 102.48]; 
-export const defaultRadius: number = 30e3;
-export const minRadius: number = 10e3;
-export const maxRadius: number = 10e6;
+export const defaultCoordinates: [number, number] = [11, 102]; // [11.82, 102.48]; // [10.439540, 58.15282]; // [50, 10]; // [11.82, 102.48]; 
+export const defaultDiameter: number = 1000;
+// export const minRadius: number = 10e3;
+// export const maxRadius: number = 10e6;
+
+export const locationMinThreshold: number = 2 / 3;
+export const locationMaxThreshold: number = 1 / 3;
+
+export const locationDebounce: number = 300;
+export const locationDecimals: number = 5;
+export const locationStep: string = '' + 1 / Math.pow(10, locationDecimals);
+
+export const latitudeLimit = 85;
+export const longitudeLimit = 180;
+
+export const h3GeohashRatio: number = 0.8;
+export const h3AreaRatio: number = 1 / 5;
+export const h3AssetResolution: number = 9;
+export const h3MinDiameter: number = 8;
+export const h3RingSize: number = 3;
+export const h3MaxResolution: number = 7;
+
+export const mapEditZoom = 14;
 
 export const serviceUuid: string = '5afe1eaf-f000-4ecb-ab75-f9ec2e1f1f10';
 export const lockUuid: string = '0be70cad-92aa-48c3-b26a-330e339aa163';

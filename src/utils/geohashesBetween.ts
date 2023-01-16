@@ -8,35 +8,35 @@ export const geohashesBetween = (
 ) => {
     const geohashes = [start];
 
-    let between = start;
-    while (between !== end.replace('~', BASE32[endIndex])) {
-        let betweenCharacters = [];
+    let geohash = start;
+    while (geohash !== end.replace('~', BASE32[endIndex])) {
+        let id = [];
         let isMax = true;
 
-        for (let index = 0; index < between.length; index++) {
-            const character = between[index];
-            if (BASE32.indexOf(character) !== endIndex) isMax = false;
-            betweenCharacters.push(character);
+        for (let index = 0; index < geohash.length; index++) {
+            const digit = geohash[index];
+            if (BASE32.indexOf(digit) !== endIndex) isMax = false;
+            id.push(digit);
         }
         if (isMax) {
-            if (between.length < end.length) {
-                betweenCharacters = Array.from({ length: between.length + 1 }, () => BASE32[0]);
+            if (geohash.length < end.length) {
+                id = Array.from({ length: geohash.length + 1 }, () => BASE32[0]);
             }
             else break;
         }
-        for (let index = betweenCharacters.length - 1; index >= 0; index--) {
-            const character = between[index];
-            const characterIndex = BASE32.indexOf(character);
+        for (let index = id.length - 1; index >= 0; index--) {
+            const digit = geohash[index];
+            const digitIndex = BASE32.indexOf(digit);
 
-            if (characterIndex < endIndex) {
-                betweenCharacters[index] = BASE32[characterIndex + 1];
+            if (digitIndex < endIndex) {
+                id[index] = BASE32[digitIndex + 1];
                 break;
             }
-            betweenCharacters[index] = BASE32[0];
+            id[index] = BASE32[0];
         }
 
-        between = betweenCharacters.join("");
-        geohashes.push(between);
+        geohash = id.join("");
+        geohashes.push(geohash);
     }
 
     return geohashes;

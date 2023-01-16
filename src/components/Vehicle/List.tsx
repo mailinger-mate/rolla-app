@@ -39,7 +39,7 @@ const VehicleList = React.memo<Props>(({
             if (initials.indexOf(initial) < 0) {
                 initials.push(initial);
                 items.push((
-                    <IonItemDivider key={initial}>
+                    <IonItemDivider key={initial} color="light">
                         <IonLabel className="ion-text-uppercase">{initial}</IonLabel>
                     </IonItemDivider>
                 ));

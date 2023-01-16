@@ -3,7 +3,7 @@ import { Geohash, geohashQueryBounds, GeohashRange } from 'geofire-common';
 import { Firestore, onSnapshot, Query, QuerySnapshot, Unsubscribe } from 'firebase/firestore';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { useLocationContext } from '../../contexts/Location';
-import { defaultRadius } from '../../config';
+import { defaultDiameter } from '../../config';
 
 interface Listener {
     geohashRange: GeohashRange;
@@ -94,52 +94,52 @@ export const useGeohashCollection = <
     }, []);
 
     const isLimited = React.useMemo(() => {
-        return location && location.radius > defaultRadius;
+        return location && location.diameter > defaultDiameter;
     }, [location]);
 
     React.useEffect(() => {
         if (!location) return;
-        const { geohashRanges } = location;
-        console.log('locationQueryBounds', JSON.stringify(geohashRanges));
+        // const { geohashRanges } = location;
+        // console.log('locationQueryBounds', JSON.stringify(geohashRanges));
 
-        const geohashRangesNear = Array.from(geohashRanges);
-        const geohashRangesFar: GeohashRange[] = [];
+        // const geohashRangesNear = Array.from(geohashRanges);
+        // const geohashRangesFar: GeohashRange[] = [];
 
-        let listenerIndex = listeners.current.length;
+        // let listenerIndex = listeners.current.length;
 
-        while (listenerIndex--) {
-            const listener = listeners.current[listenerIndex];
-            const [listenerStart, listenerEnd] = listener.geohashRange;
-            const rangeIndex = geohashRangesNear.findIndex(([start, end]) =>
-                start === listenerStart && end === listenerEnd);
-            const inRange = rangeIndex >= 0;
+        // while (listenerIndex--) {
+        //     const listener = listeners.current[listenerIndex];
+        //     const [listenerStart, listenerEnd] = listener.geohashRange;
+        //     const rangeIndex = geohashRangesNear.findIndex(([start, end]) =>
+        //         start === listenerStart && end === listenerEnd);
+        //     const inRange = rangeIndex >= 0;
 
-            if (inRange) {
-                geohashRangesNear.splice(rangeIndex, 1);
-                continue;
-            }
+        //     if (inRange) {
+        //         geohashRangesNear.splice(rangeIndex, 1);
+        //         continue;
+        //     }
 
-            geohashRangesFar.push(listener.geohashRange);
-            listeners.current.splice(listenerIndex, 1);
-            listener.unsubscribe();
-        }
+        //     geohashRangesFar.push(listener.geohashRange);
+        //     listeners.current.splice(listenerIndex, 1);
+        //     listener.unsubscribe();
+        // }
 
-        if (geohashRangesFar.length) {
-            setCollection(previousCollection =>
-                clearCollection(geohashRangesFar, previousCollection));
-        }
+        // if (geohashRangesFar.length) {
+        //     setCollection(previousCollection =>
+        //         clearCollection(geohashRangesFar, previousCollection));
+        // }
 
-        geohashRangesNear.forEach(geohashRange => {
-            listeners.current.push({
-                unsubscribe: onSnapshot(query(db, geohashRange), query => {
-                    setCollection(previousCollection =>
-                        appendCollection(query, previousCollection))
-                }),
-                geohashRange,
-            });
-        });
+        // geohashRangesNear.forEach(geohashRange => {
+        //     listeners.current.push({
+        //         unsubscribe: onSnapshot(query(db, geohashRange), query => {
+        //             setCollection(previousCollection =>
+        //                 appendCollection(query, previousCollection))
+        //         }),
+        //         geohashRange,
+        //     });
+        // });
 
-        console.log('listeners', JSON.stringify(listeners.current));
+        // console.log('listeners', JSON.stringify(listeners.current));
 
     }, [location, isLimited]);
 

@@ -4,13 +4,14 @@ import {
     DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, orderBy, setDoc, updateDoc, startAt, endAt, QueryConstraint, GeoPoint, limit, getCountFromServer,
 } from "firebase/firestore";
 import { GeohashRange } from "geofire-common";
+import { H3Index } from "h3-js";
 import { Path } from "./enums";
 import { Security } from "./security";
 import { Station } from "./station";
 
 export interface Vehicle {
     free: boolean;
-    geohash: string;
+    h3Index: H3Index;
     isOnline: boolean;
     licenseId: string;
     location: GeoPoint;
@@ -31,7 +32,7 @@ const converter = {
     ): Vehicle {
         const {
             free,
-            geohash,
+            h3Index,
             licenseId,
             location,
             model,
@@ -41,7 +42,7 @@ const converter = {
         } = snapshot.data(options);
         return {
             free,
-            geohash,
+            h3Index,
             isOnline: !!security,
             licenseId,
             location,
@@ -72,18 +73,27 @@ export const getVehicles = (
     return query(collection(db, Path.vehicle), ...constraints).withConverter(converter);
 }
 
+interface VehiclesAtConstrains {
+    single?: boolean;
+    geohashesExcluded?: string[];
+}
+
 export const getVehiclesAt = (
     db: Firestore,
-    geohashRange: GeohashRange,
-    isLimited?: boolean,
+    h3IndexStart: H3Index,
+    h3IndexEnd: H3Index,
+    // { geohashesExcluded, single }: VehiclesAtConstrains = {}
 ) => {
-    const [ start, end ] = geohashRange;
+    // const [ start, end ] = geohashRange;
     const constrains: QueryConstraint[] = [
-        orderBy('geohash'),
-        startAt(start),
-        endAt(end),
+        orderBy('h3Index'),
+        startAt(h3IndexStart),
+        endAt(h3IndexEnd),
     ];
-    if (isLimited) constrains.push(limit(1));
+    // console.log('geohash', start, end, geohashesExcluded)
+    // if (geohashesExcluded?.length) constrains.push(where('geohash', 'not-in', geohashesExcluded));
+    // if (single) constrains.push(limit(1));
+
     return query(
         collection(db, Path.vehicle),
         ...constrains,

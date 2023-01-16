@@ -74,7 +74,7 @@ const App = React.memo(() => {
     return (
         <IonApp>
             <IonReactRouter>
-                <IonSplitPane contentId="main">
+                <IonSplitPane contentId="main" when={false}>
                     <IonMenu contentId="main">
                         <IonHeader>
                             <IonToolbar>

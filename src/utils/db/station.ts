@@ -2,13 +2,15 @@ import React from 'react';
 import { doc, DocumentData, Firestore, getDoc, QueryDocumentSnapshot, SnapshotOptions, GeoPoint, collection, query, setDoc, orderBy, deleteDoc, startAt, endAt, onSnapshot, QuerySnapshot } from 'firebase/firestore';
 import { geohashQueryBounds, GeohashRange } from 'geofire-common';
 import { Path } from './enums';
+import { H3Index } from 'h3-js';
 
 export interface Station {
     // id: string;
-    name: string;
-    location: GeoPoint;
-    geohash: string;
     address: string;
+    geohash: string;
+    h3Index: H3Index;
+    location: GeoPoint;
+    name: string;
 }
 
 const converter = {
@@ -22,18 +24,20 @@ const converter = {
     ): Station {
         const { 
             // id,
-            name,
-            location,
-            geohash,
             address,
+            geohash,
+            h3Index,
+            location,
+            name,
         } = snapshot.data(options);
 
         return {
             // id,
-            name,
-            location,
-            geohash,
             address,
+            geohash,
+            h3Index,
+            location,
+            name,
         };
     }
 };
@@ -59,7 +63,11 @@ export const getStationsAt = (
     ).withConverter(converter);
 };
 
-export const setStation = (db: Firestore, station: Station, id?: string) => {
+export const setStation = (
+    db: Firestore,
+    station: Partial<Station>,
+    id?: string,
+) => {
     const document = id
         ? doc(db, Path.station, id)
         : doc(collection(db, Path.station));

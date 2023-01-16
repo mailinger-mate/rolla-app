@@ -12,9 +12,9 @@ export const useGeohashCount = <
     query: (
         db: Firestore,
         geohashRange: GeohashRange,
-        isLimited?: boolean,
+        constrains: { geohashesExcluded: string[] },
     ) => Query<Document>
-): Count | undefined => {
+): Count => {
     const { db } = useFirebaseContext();
     const { location } = useLocationContext();
 
@@ -23,31 +23,48 @@ export const useGeohashCount = <
         aggregate: { index: string, count: number }
     ) => {
         const { index, count } = aggregate;
-        let newState: Count;
-        if (!state) {
-            newState = { [index]: count };
-        }
-        else if (state[index] !== count) {
-            newState = {
-                ...state,
-                [index]: count,
-            };
-        }
-        return (!state
+        // let newState: Count;
+        // if (!state) {
+        //     newState = { [index]: count };
+        // }
+        // else if (state[index] !== count) {
+        //     newState = {
+        //         ...state,
+        //         [index]: count,
+        //     };
+        // }
+        return !state
             ? { [index]: count }
-            : state[index] !== count
-                ? { ...state, [index]: count } 
-                : false) || state;
-    }, undefined);
+            : { ...state, [index]: count };
+    }, {});
 
     React.useEffect(() => {
         if (!location) return;
-        location.geohashRanges.forEach(async (geohashRange) => {
-            const [start, end] = geohashRange;
-            const index = `${start}:${end}`;
-            // const aggregate = await Math.round(Math.random() * 1000); // await getCountFromServer(query(db, geohashRange));
-            setCount({ index, count: Math.round(Math.random() * 1000) /* aggregate.data().count */ })
-        });
+        // Promise
+        //     .all(geohashRanges.map(async (geohashRange, index) => {
+        //         // const [start, end] = geohashRange;
+        //         // const range = `${start}:${end}`;
+        //         return Math.round(Math.random() * 1000);
+        //         const [geohashesDistant] = location.geohashesSorted[index];
+        //         const aggregate = await getCountFromServer(
+        //             query(db, geohashRange, {
+        //                 geohashesExcluded: geohashesDistant,
+        //             }
+        //         ));
+        //         const count = aggregate.data().count;
+        //         // const aggregate = await Math.round(Math.random() * 1000); // await getCountFromServer(query(db, geohashRange));
+        //         // setCount({ index, count: Math.round(Math.random() * 1000) /* aggregate.data().count */ })
+        //         // console.log('aggregate', range, count);
+        //         // setCount({ index: range, count });
+        //         return count;
+        //     }))
+        //     .then(counts => {
+        //         // console.log(location.cellIndex, counts);
+        //         setCount({
+        //             index: location.h3Index,
+        //             count: counts.reduce((sum, count) => sum + count),
+        //         });
+        //     })
     }, [location]);
 
     return count;

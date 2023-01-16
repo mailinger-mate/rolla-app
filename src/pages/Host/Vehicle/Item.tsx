@@ -65,11 +65,11 @@ const VehicleItemPage: React.FC<Props> = ({ match }) => {
     ) => {
         const data = document.data();
         if (!data) return;
-        const { geohash, location } = data;
+        const { h3Index, location } = data;
         present();
         setVehicle(db, {
             station: document.ref,
-            geohash,
+            h3Index,
             location,
         }, id)
             .then(() => {

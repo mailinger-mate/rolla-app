@@ -1,13 +1,13 @@
-
+export const high1 = (prefersDark = false) => prefersDark ? '#333333' : '#ffffff';
+export const high2 = (prefersDark = false) => prefersDark ? '#353535' : '#fefefe';
+export const high3 = (prefersDark = false) => prefersDark ? '#3c3c3c' : '#f5f5f5';
+export const high4 = (prefersDark = false) => prefersDark ? '#3e3e3e' : '#f2f2f2';
+export const high5 = (prefersDark = false) => prefersDark ? '#696969' : '#ededed';
+export const high6 = (prefersDark = false) => prefersDark ? '#545454' : '#dedede';
+export const low = (prefersDark = false) => prefersDark ? '#dddddd' : '#333333';
+export const warning = () => '#ff6347';
 
 export const styleMap = (prefersDark = false) => {
-    const high1 = prefersDark ? '#333333' : '#ffffff';
-    const high2 = prefersDark ? '#353535' : '#fefefe';
-    const high3 = prefersDark ? '#3c3c3c' : '#f5f5f5';
-    const high4 = prefersDark ? '#3e3e3e' : '#f2f2f2';
-    const high5 = prefersDark ? '#4a4a4a' : '#e9e9e9';
-    const high6 = prefersDark ? '#545454' : '#dedede';
-    const low = prefersDark ? '#dddddd' : '#333333';
     return [
         {
             featureType: 'all',
@@ -17,7 +17,7 @@ export const styleMap = (prefersDark = false) => {
                     saturation: 36
                 },
                 {
-                    color: low
+                    color: low(prefersDark)
                 },
                 {
                     lightness: 40
@@ -32,7 +32,7 @@ export const styleMap = (prefersDark = false) => {
                     visibility: 'on'
                 },
                 {
-                    color: high1
+                    color: high1(prefersDark)
                 },
                 {
                     lightness: 16
@@ -53,7 +53,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.fill',
             stylers: [
                 {
-                    color: high2
+                    color: high2(prefersDark)
                 },
                 {
                     lightness: 20
@@ -65,7 +65,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.stroke',
             stylers: [
                 {
-                    color: high2
+                    color: high2(prefersDark)
                 },
                 {
                     lightness: 17
@@ -80,7 +80,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high3
+                    color: high3(prefersDark)
                 },
                 {
                     lightness: 20
@@ -92,7 +92,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high3
+                    color: high3(prefersDark)
                 },
                 {
                     lightness: 21
@@ -104,7 +104,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high6
+                    color: high6(prefersDark)
                 },
                 {
                     lightness: 21
@@ -116,7 +116,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.fill',
             stylers: [
                 {
-                    color: high1
+                    color: high1(prefersDark)
                 },
                 {
                     lightness: 17
@@ -128,7 +128,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.stroke',
             stylers: [
                 {
-                    color: high1
+                    color: high1(prefersDark)
                 },
                 {
                     lightness: 29
@@ -143,7 +143,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high1
+                    color: high1(prefersDark)
                 },
                 {
                     lightness: 18
@@ -155,7 +155,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high1
+                    color: high1(prefersDark)
                 },
                 {
                     lightness: 16
@@ -167,7 +167,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high4
+                    color: high4(prefersDark)
                 },
                 {
                     lightness: 19
@@ -179,10 +179,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high5
-                },
-                {
-                    lightness: 17
+                    color: high5(prefersDark)
                 }
             ]
         }
@@ -262,7 +259,7 @@ const styleO = [
     //     elementType: 'labels.text.fill',
     //     stylers: [
     //         {
-    //             color: high
+    //             color: high(prefersDark)
     //         }
     //     ]
     // },

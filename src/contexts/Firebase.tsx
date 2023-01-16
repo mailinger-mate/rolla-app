@@ -9,7 +9,7 @@ interface Context {
     db: Firestore;
 }
 
-console.log(process.env)
+// console.log(process.env)
 
 const app = initializeApp({
     apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
