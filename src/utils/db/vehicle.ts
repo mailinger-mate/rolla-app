@@ -78,6 +78,20 @@ interface VehiclesAtConstrains {
     geohashesExcluded?: string[];
 }
 
+export const getVehiclesByAgent = (
+    db: Firestore,
+    agentIds: string[],
+) => {
+    return getDocs(query(
+        collection(db, Path.vehicle),
+        where(
+            'agent',
+            'in',
+            agentIds.map(agentId => doc(db, Path.agent, agentId))
+        )
+    ).withConverter(converter));
+}
+
 export const getVehiclesAt = (
     db: Firestore,
     h3IndexStart: H3Index,

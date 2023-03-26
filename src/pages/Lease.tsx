@@ -1,7 +1,7 @@
 import { IonContent, IonHeader, IonPage, IonRouterOutlet, IonTitle, IonToolbar } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route, RouteComponentProps } from 'react-router';
-import Edit from './Host/Station/Item';
+import Item from './Host/Station/Item';
 import './Tab3.css';
 
 type HostPageProps = RouteComponentProps<{
@@ -16,7 +16,7 @@ const Tab3: React.FC<HostPageProps> = ({ match }) => {
       <IonReactRouter>
         <IonRouterOutlet>
           {/* <Route exact path={match.url} component={StationEditPage} /> */}
-          <Route path={`${match.url}/station/:id`} component={Edit} />
+          <Route path={`${match.url}/station/:id`} component={Item} />
         </IonRouterOutlet>
       </IonReactRouter>
       <IonHeader>

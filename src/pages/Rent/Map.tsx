@@ -3,7 +3,7 @@ import { IonBadge, IonButton, IonButtons, IonCard, IonCardContent, IonCardHeader
 import { RouteChildrenProps } from 'react-router';
 import { arrowRedo, call, navigateOutline, searchOutline } from 'ionicons/icons';
 import { useStationContext } from '../../contexts/Station';
-import { Map, View } from '../../components/Map/Map';
+import { Map, MarkerColor, View } from '../../components/Map/Map';
 import { useVehicleContext } from '../../contexts/Vehicle';
 
 import './Map.css';
@@ -379,6 +379,8 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
                     onDrag={minimizeStation}
                     onClick={hideAll}
                     onFocus={selectStation}
+                    // locationCell={true}
+                    // centerMarker={MarkerColor.Primary}
                     // center={center}
                     // filter={filter}
                     view={view}

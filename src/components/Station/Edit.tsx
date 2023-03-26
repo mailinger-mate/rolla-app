@@ -108,7 +108,7 @@ const StationEdit = React.memo<Props>(({
     const saveStation: SubmitHandler<Form> = ({ name, address }) => {
         // console.log('state', formState.errors, formState.dirtyFields);
         // if (!location) throw new Error('No location');
-        const { coordinates, h3AssetIndex } = location;
+        const { coordinates, h3IndexMax: h3AssetIndex } = location;
         console.log('saveStation', name, address, coordinates, h3AssetIndex);
         // const geohash = geohashForLocation([location.latitude, location.longitude]);
         setStation(db, {
@@ -117,7 +117,8 @@ const StationEdit = React.memo<Props>(({
             location: new GeoPoint(...coordinates),
             h3Index: h3AssetIndex,
         }, id).then(id => {
-            history.push(`/${Path.host}/${Path.station}/${id}`)
+            // history.push(`/${Path.host}/${Path.station}/${id}`)
+            onSubmit();
         })
     }
 
@@ -179,8 +180,9 @@ const StationEdit = React.memo<Props>(({
                                 height="50vh"
                                 zoom={mapEditZoom}
                                 center={center}
+                                scope={false}
                                 centerMarker={MarkerColor.Warning}
-                                assetCell={true}
+                                locationCell={true}
                             />
                         </IonCol>
                     </IonRow>

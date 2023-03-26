@@ -1,9 +1,7 @@
 import React, { Reducer } from 'react';
-import { defaultCoordinates, defaultDiameter as defaultDiameter, h3GeohashRatio, h3AssetResolution, locationMaxThreshold, locationMinThreshold, h3AreaRatio, h3MaxResolution, h3MinDiameter, locationDecimals } from '../config';
+import { defaultCoordinates, defaultDiameter, h3ResolutionMax, h3AreaRatio, h3ResolutionLocation as h3ResolutionLocation } from '../config';
 import { Geolocation } from '@capacitor/geolocation';
-import { Geohash, geohashQueryBounds, GeohashRange } from 'geofire-common';
-import { cellToChildren, cellToLatLng, getHexagonEdgeLengthAvg, H3Index, latLngToCell, UNITS } from 'h3-js';
-import { sortGeohashes } from '../utils/sortGeohashes';
+import { cellToChildren, H3Index, latLngToCell } from 'h3-js';
 import { roundNewCoordinates } from '../utils/geo/roundCoordinates';
 
 export type Coordinates = [number, number];
@@ -12,7 +10,7 @@ const h3Resolutions = [1100, 420, 160, 60, 20, 8, 3, 1, 0.5, 0.17, 0.06, 0.02, 0
 
 const areaToResolution = (diameter: number) => {
     let resolution;
-    for (resolution = 0; resolution < h3MaxResolution; resolution++) {
+    for (resolution = 0; resolution <= h3ResolutionLocation; resolution++) {
         if (diameter >= h3Resolutions[resolution]) return resolution;
     }
     return resolution;
@@ -27,7 +25,7 @@ interface Circle extends Point {
 }
 
 interface Location extends Circle {
-    h3AssetIndex: H3Index;
+    h3IndexMax: H3Index;
     h3Index: H3Index;
     h3Resolution: number;
     // geohashRanges: GeohashRange[];
@@ -49,9 +47,11 @@ interface Context {
     location: Location;
     // locationRadius?: number;
     position?: Coordinates;
+    scope?: boolean;
     // getLocation: () => Circle;
     // getAssetCell: () => H3Index;
     setLocation: (location: Partial<Circle>) => void;
+    setScope: (scope: boolean) => void;
     // setLocationRadius: (radius: number) => void;
     // setLocationBounds: (bounds: [Coordinates, Coordinates]) => void;
     // zoom: (reducer?: 'in' | 'out') => void;
@@ -65,7 +65,7 @@ const cellToChild = (
     // childResolution: number,
 ) => {
     return Array
-        .from(Array(h3AssetResolution - h3Resolution).keys())
+        .from(Array(h3ResolutionMax - h3Resolution).keys())
         .reduce((
             h3Index,
             resolution
@@ -87,6 +87,15 @@ const cellToRange = (
     ];
 }
 
+// const cellToMaxRange = (
+//     h3Index: H3Index,
+// ): [H3Index, H3Index] => {
+//     console.log('range');
+//     const cells = cellToChildren(h3Index, h3ResolutionMax);
+//     console.log('range done');
+//     return [cells[0], cells[cells.length - 1]]
+// }
+
 const calculateLocation = ({
     coordinates,
     diameter,
@@ -95,13 +104,15 @@ const calculateLocation = ({
 
     const h3Resolution = areaToResolution(diameter * h3AreaRatio);
     const h3Index = latLngToCell(latitude, longitude, h3Resolution);
-    const h3AssetIndex = latLngToCell(latitude, longitude, h3AssetResolution);
+    const h3IndexMax = latLngToCell(latitude, longitude, h3ResolutionMax);
     const [h3RangeStart, h3RangeEnd] = cellToRange(h3Index, h3Resolution);
+
+    console.log('Location', { h3Resolution, h3Index });
 
     return {
         coordinates,
         diameter,
-        h3AssetIndex,
+        h3IndexMax,
         h3Index,
         h3Resolution,
         h3RangeStart,
@@ -169,6 +180,7 @@ const LocationContext = React.createContext<Context>({
     location: calculateLocation(defaultLocation),
     // getAssetCell: () => latLngToAssetCell(defaultCoordinates),
     setLocation: () => undefined,
+    setScope: () => true,
     // getLocation: () => defaultLocation,
     // setLocationRadius: () => undefined,
     // zoom: () => undefined,
@@ -178,7 +190,7 @@ const LocationContext = React.createContext<Context>({
 const useLocationContext = () => React.useContext(LocationContext);
 
 
-const useDifferent = (
+const useDifferentCoordinates = (
     before: Coordinates | undefined,
     after: Coordinates,
 ) => {
@@ -197,7 +209,7 @@ const useDifferent = (
 // }
 
 const LocationProvider = React.memo(({ children }) => {
-    const [position, setPosition] = React.useReducer(useDifferent, undefined);
+    const [position, setPosition] = React.useReducer(useDifferentCoordinates, undefined);
 
     // const [location, setLocation] = React.useReducer(useDifferent, defaultLocation as Coordinates);
     // const [locationBounds, setLocationBounds] = React.useState<[Coordinates, Coordinates]>();
@@ -326,6 +338,8 @@ const LocationProvider = React.memo(({ children }) => {
     //     diameter: defaultDiameter,
     // });
 
+    const [scope, setScope] = React.useState(true);
+
     const [location, setLocation] = React.useReducer<
         Reducer<Location, Partial<Circle>>,
         Circle
@@ -434,9 +448,6 @@ const LocationProvider = React.memo(({ children }) => {
         });
     }, []);
 
-    const getLocation = React.useCallback(() => {
-        return location;
-    }, [location]);
 
     React.useEffect(clearWatch, []);
 
@@ -458,8 +469,10 @@ const LocationProvider = React.memo(({ children }) => {
         // geohashRanges,
         // geohashRangesExcluded,
         position,
+        scope,
         // getLocation,
         setLocation,
+        setScope,
         // setLocationBounds,
         // setLocationRadius,
         // zoom,
@@ -477,6 +490,7 @@ const LocationProvider = React.memo(({ children }) => {
         location,
         // locationRadius,
         position,
+        scope,
     ]);
 
     return (

@@ -1,6 +1,5 @@
 import React from 'react';
 import { DocumentData, Firestore, getCountFromServer, Query } from 'firebase/firestore';
-import { GeohashRange } from 'geofire-common';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { useLocationContext } from '../../contexts/Location';
 import { H3Index } from 'h3-js';
@@ -34,7 +33,8 @@ export const useH3Aggregates = <
             h3RangeStart,
             h3RangeEnd,
             h3Resolution
-        }
+        },
+        scope,
     } = useLocationContext();
 
     const [aggregates, setAggregate] = React.useReducer<
@@ -43,8 +43,10 @@ export const useH3Aggregates = <
         { cells, max, resolution, total },
         aggregate,
     ) => {
+        if (!aggregate) return { cells: {} };
         const { count, h3Index, h3Resolution } = aggregate;
         const preserve = resolution === h3Resolution;
+        console.log('setAggregate', { count, h3Index })
         return {
             cells: {
                 ...(preserve && cells),
@@ -59,6 +61,7 @@ export const useH3Aggregates = <
     });
 
     React.useEffect(() => {
+        if (!scope) return;
         getCountFromServer(query(db, h3RangeStart, h3RangeEnd))
             .then(aggregate => {
                 const count = aggregate.data().count;
@@ -74,6 +77,7 @@ export const useH3Aggregates = <
         h3RangeStart,
         h3RangeEnd,
         h3Resolution,
+        scope,
     ]);
 
     return aggregates;

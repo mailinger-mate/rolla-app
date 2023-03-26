@@ -9,10 +9,11 @@ import { bluetoothOutline, checkmarkOutline, key, lockClosedOutline, lockOpenOut
 import { useContractContext } from './Contract';
 import { PageHeader } from '../components/Layout/PageHeader';
 import { useVehicleContext } from './Vehicle';
-import { Record, useStorageContext } from './Storage';
+import { Store, useStorageContext } from './Storage';
 import { DocumentReference, onSnapshot } from 'firebase/firestore';
 import { isAfter } from '../utils/datetime';
 import { VehicleListItem } from '../components/Vehicle/ListItem';
+import { getVehiclesByAgent, Vehicle } from '../utils/db/vehicle';
 
 interface Context {
     select: (name?: string) => Promise<void>;
@@ -90,7 +91,7 @@ const AgentProvider = React.memo((props) => {
     const { db } = useFirebaseContext();
     const storage = useStorageContext();
     const { assetsLeased } = useContractContext();
-    const { vehicles } = useVehicleContext();
+    // const { vehicles } = useVehicleContext();
 
     const [target, setTarget] = React.useState<'auto' | string>();
     const device = React.useRef<BleDevice>();
@@ -128,7 +129,7 @@ const AgentProvider = React.memo((props) => {
         modalRef.current?.setCurrentBreakpoint(isSelecting ? Breakpoint.Max : Breakpoint.Min);
     }, [isSelecting])
 
-    const [agents, setAgents] = React.useState<Record<ScanResult>[]>([]);
+    const [agents, setAgents] = React.useState<Store<ScanResult>[]>([]);
     const [isSkilled, setSkilled] = React.useState(false);
 
     const practiceSkill = React.useCallback(async (
@@ -153,6 +154,21 @@ const AgentProvider = React.memo((props) => {
         return value;
     }, []);
 
+
+    const [vehicles, setVehicles] = React.useState<Record<string, Vehicle>>();
+
+    // React.useEffect(() => {
+    //     if (!agents.length) return;
+    //     getVehiclesByAgent(db, agents.map(({ value }) => value.device.deviceId))
+    //         .then(query => {
+    //             setVehicles(Object.fromEntries(
+    //                 query.docs.map(document =>
+    //                     [document.id, document.data()])));
+    //         })
+    // }, [
+    //     agents
+    // ]);
+
     const [agent, setAgent] = React.useState<string>();
 
     const [security, setSecurity] = React.useState<DocumentReference<Security>>();
@@ -165,6 +181,7 @@ const AgentProvider = React.memo((props) => {
             return previous;
         });
     }, [vehicles, agent]);
+    
 
     const accessKey = React.useRef<string>();
 
@@ -181,7 +198,7 @@ const AgentProvider = React.memo((props) => {
     const writeLock2 = React.useCallback(async () => {
         if (!device.current) return;
 
-        const storedKey: Record<string> = await storage.get(`${Key.AccessKey}/${device.current.name}`);
+        const storedKey: Store<string> = await storage.get(`${Key.AccessKey}/${device.current.name}`);
         const key = accessKey.current || storedKey.value;
 
         if (!key || !nonce.current) throw error(Message.NoAccess);
@@ -252,7 +269,7 @@ const AgentProvider = React.memo((props) => {
         target: string,
     ) => {
         const newDevice = await BleClient.requestDevice(bleOptions({ name: target }));
-        setAgents([new Record<ScanResult>({ device: newDevice })]);
+        setAgents([new Store<ScanResult>({ device: newDevice })]);
         device.current = newDevice;
     };
 
@@ -293,7 +310,7 @@ const AgentProvider = React.memo((props) => {
 
             setTimeout(async () => {
                 await BleClient.stopLEScan();
-                setAgents(results.map(agent => new Record(agent)));
+                setAgents(results.map(agent => new Store(agent)));
                 showError('stop scan');
                 setScan(undefined);
             }, agentScan);
@@ -307,7 +324,7 @@ const AgentProvider = React.memo((props) => {
     const scanInterval = React.useCallback(async () => {
         if (!await modalRef.current?.getCurrentBreakpoint() || target || device.current) return;
         setAgents(previousAgents => {
-            const agents: Record<ScanResult>[] = [];
+            const agents: Store<ScanResult>[] = [];
             const fresh = previousAgents.every(record => {
                 if (isAfter(record.date, agentSleepAfter)) return false;
                 agents.push(record);
@@ -413,7 +430,12 @@ const AgentProvider = React.memo((props) => {
             list.push(item);
             return list;
         }, undefined);
-    }, [scan, agents, vehicles, assetsLeased]);
+    }, [
+        scan,
+        agents,
+        // vehicles,
+        assetsLeased,
+    ]);
 
     // const [isConnecting, setConnecting] = React.useState(false);
 

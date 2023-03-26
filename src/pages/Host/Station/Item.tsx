@@ -13,11 +13,7 @@ type Props = RouteComponentProps<{
     id: string;
 }>
 
-var objet = {
-    match: true
-}
-
-const Edit: React.FC<Props> = ({ match }) => {
+const Item: React.FC<Props> = ({ match }) => {
     const { id } = match.params;
     const { db } = useFirebaseContext();
     const [station, loading, error] = useDocumentData(getStation(db, id));
@@ -75,9 +71,10 @@ const Edit: React.FC<Props> = ({ match }) => {
                 {/* <StationEdit id={station} /> */}
                 <Map
                     center={[latitude, longitude]}
-                    live={false}
-                    grid={false}
+                    // grid={false}
                     height="200px"
+                    drag={false}
+                    scope={false}
                     centerMarker={MarkerColor.Disabled}
                     zoom={14}
                 />
@@ -96,7 +93,7 @@ const Edit: React.FC<Props> = ({ match }) => {
                     <IonListHeader>
                         <IonLabel>Vehicles</IonLabel>
                     </IonListHeader>
-                    <VehicleList station={id} />
+                    <VehicleList station={id} routerLink={`/${Path.host}/${Path.vehicle}`}/>
                 </IonList>
                 <IonModal
                     // ref={modalRef}
@@ -115,4 +112,4 @@ const Edit: React.FC<Props> = ({ match }) => {
     );
 };
 
-export default Edit;
+export default Item;

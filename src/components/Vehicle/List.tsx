@@ -7,7 +7,7 @@ import { getVehicles } from '../../utils/db/vehicle';
 
 interface Props {
     station?: string;
-    routerLink?: string;
+    routerLink: string;
 }
 
 const VehicleList = React.memo<Props>(({

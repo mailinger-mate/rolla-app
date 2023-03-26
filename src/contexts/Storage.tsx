@@ -6,7 +6,7 @@ import { isAfter } from '../utils/datetime';
 const storage = new Storage();
 storage.create();
 
-class Record<Value> {
+class Store<Value> {
     public readonly date;
     constructor(
         public readonly value: Value,
@@ -19,7 +19,7 @@ const expire = (
     key: string,
     value: unknown,
 ) => {
-    return storage.set(key, new Record(value))
+    return storage.set(key, new Store(value))
 }
 
 interface Context extends Pick<Storage, 'get' | 'set' | 'clear' | 'remove'> {
@@ -45,7 +45,7 @@ const StorageProvider = React.memo(({ children }) => {
 
     React.useEffect(() => {
         storage.forEach((record, key)=> {
-            if (record instanceof Record && isAfter(record.date, storageExpiry)) {
+            if (record instanceof Store && isAfter(record.date, storageExpiry)) {
                 storage.remove(key);
             }
         });
@@ -59,7 +59,7 @@ const StorageProvider = React.memo(({ children }) => {
 });
 
 export {
-    Record,
+    Store,
     StorageProvider,
     useStorageContext,
 }

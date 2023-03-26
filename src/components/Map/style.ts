@@ -1,13 +1,8 @@
-export const high1 = (prefersDark = false) => prefersDark ? '#333333' : '#ffffff';
-export const high2 = (prefersDark = false) => prefersDark ? '#353535' : '#fefefe';
-export const high3 = (prefersDark = false) => prefersDark ? '#3c3c3c' : '#f5f5f5';
-export const high4 = (prefersDark = false) => prefersDark ? '#555555' : '#f2f2f2';
-export const high5 = (prefersDark = false) => prefersDark ? '#696969' : '#ededed';
-export const high6 = (prefersDark = false) => prefersDark ? '#545454' : '#dedede';
-export const low = (prefersDark = false) => prefersDark ? '#dddddd' : '#333333';
-export const warning = () => '#ff6347';
+import { h3ResolutionLocation } from "../../config";
+import { Token } from "../../contexts/Theme";
+import { CellProperties } from "./Map";
 
-export const styleMap = (prefersDark = false) => {
+export const styleMap = (color: (name: Token) => string) => {
     return [
         {
             featureType: 'all',
@@ -17,7 +12,7 @@ export const styleMap = (prefersDark = false) => {
                     saturation: 36
                 },
                 {
-                    color: low(prefersDark)
+                    color: color(Token.MonoLow4)
                 },
                 {
                     lightness: 40
@@ -32,7 +27,7 @@ export const styleMap = (prefersDark = false) => {
                     visibility: 'on'
                 },
                 {
-                    color: high1(prefersDark)
+                    color: color(Token.MonoHigh6)
                 },
                 {
                     lightness: 16
@@ -53,7 +48,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.fill',
             stylers: [
                 {
-                    color: high2(prefersDark)
+                    color: color(Token.MonoHigh5)
                 },
                 {
                     lightness: 20
@@ -65,7 +60,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.stroke',
             stylers: [
                 {
-                    color: high2(prefersDark)
+                    color: color(Token.MonoHigh5)
                 },
                 {
                     lightness: 17
@@ -80,7 +75,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high3(prefersDark)
+                    color: color(Token.MonoHigh4)
                 },
                 {
                     lightness: 20
@@ -92,7 +87,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high3(prefersDark)
+                    color: color(Token.MonoHigh4)
                 },
                 {
                     lightness: 21
@@ -104,7 +99,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high6(prefersDark)
+                    color: color(Token.MonoLow2)
                 },
                 {
                     lightness: 21
@@ -116,7 +111,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.fill',
             stylers: [
                 {
-                    color: high1(prefersDark)
+                    color: color(Token.MonoHigh6)
                 },
                 {
                     lightness: 17
@@ -128,7 +123,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry.stroke',
             stylers: [
                 {
-                    color: high1(prefersDark)
+                    color: color(Token.MonoHigh6)
                 },
                 {
                     lightness: 29
@@ -143,7 +138,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high1(prefersDark)
+                    color: color(Token.MonoHigh6)
                 },
                 {
                     lightness: 18
@@ -155,7 +150,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high1(prefersDark)
+                    color: color(Token.MonoHigh6)
                 },
                 {
                     lightness: 16
@@ -167,7 +162,7 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high3(prefersDark)
+                    color: color(Token.MonoHigh4)
                 },
                 {
                     lightness: 19
@@ -179,125 +174,55 @@ export const styleMap = (prefersDark = false) => {
             elementType: 'geometry',
             stylers: [
                 {
-                    color: high5(prefersDark)
+                    color: color(Token.MonoLow1)
                 }
             ]
         }
     ]
 };
 
-const styleO = [
-    // {
-    //     featureType: 'water',
-    //     elementType: 'geometry',
-    //     stylers: [
-    //         {
-    //             color: '#193341'
-    //         }
-    //     ]
-    // },
-    // {
-    //     featureType: 'landscape',
-    //     elementType: 'geometry',
-    //     stylers: [
-    //         {
-    //             color: '#2c5a71'
-    //         }
-    //     ]
-    // },
-    {
-        featureType: 'road',
-        elementType: 'geometry',
-        stylers: [
-            // {
-            //     color: '#29768a'
-            // },
-            // {
-            //     lightness: -37
-            // }
-            {
-                lightness: -7
-            }
-        ]
-    },
-    // {
-    //     featureType: 'poi',
-    //     elementType: 'geometry',
-    //     stylers: [
-    //         {
-    //             color: '#406d80'
-    //         }
-    //     ]
-    // },
-    // {
-    //     featureType: 'transit',
-    //     elementType: 'geometry',
-    //     stylers: [
-    //         {
-    //             color: '#406d80'
-    //         }
-    //     ]
-    // },
-    {
-        elementType: 'labels.text.stroke',
-        stylers: [
-            {
-                visibility: 'on'
-            },
-            // {
-            //     color: '#3e606f'
-            // },
-            {
-                weight: 2
-            },
-            {
-                gamma: 0.84
-            }
-        ]
-    },
-    // {
-    //     elementType: 'labels.text.fill',
-    //     stylers: [
-    //         {
-    //             color: high(prefersDark)
-    //         }
-    //     ]
-    // },
-    {
-        featureType: 'administrative',
-        elementType: 'geometry',
-        stylers: [
-            {
-                weight: 0.6
-            },
-            // {
-            //     color: '#1a3541'
-            // }
-        ]
-    },
-    {
-        elementType: 'labels',
-        stylers: [
-            {
-                visibility: 'off'
-            }
-        ]
-    },
-    {
-        elementType: 'labels.icon',
-        stylers: [
-            {
-                visibility: 'off'
-            }
-        ]
-    },
-    // {
-    //     featureType: 'poi.park',
-    //     elementType: 'geometry',
-    //     stylers: [
-    //         {
-    //             color: '#2c5a71'
-    //         }
-    //     ]
-    // }
-];
+export const cellFillColor = ({
+    assetsCount,
+    assetsMax,
+    isLocation = false,
+}: CellProperties) => {
+    if (!assetsCount || !assetsMax) return;
+    return `hsl(120deg, ${Math.max(Math.round(assetsCount / assetsMax * 100), 10)}%, ${50 + +isLocation * 15}%)`;
+};
+
+export const cellFillOpacity = ({
+    assetsCount,
+    isAggregate
+}: CellProperties) => {
+    if (!isAggregate) return 0;
+    if (assetsCount === 0) return 0.3;
+    if (assetsCount) return 0.2;
+    return 0;
+}
+
+export const cellZIndex = ({
+    assetsCount,
+    isAsset: isMaxCell,
+    isLocation: isLocationCell,
+}: CellProperties): number => {
+    if (isMaxCell) return 30;
+    if (isLocationCell) return 20;
+    if (assetsCount) return 10;
+    return 1;
+}
+
+export const cellStrokeColorToken = ({
+    isAsset: isMaxCell,
+    isLocation: isLocationCell,
+}: CellProperties): Token => {
+    if (isMaxCell) return Token.Warning;
+    if (isLocationCell) return Token.MonoLow4;
+    return Token.MonoHigh3;
+}
+
+export const cellStrokeWeight = ({
+    resolution,
+}: CellProperties): number => {
+    if (resolution > h3ResolutionLocation) return 2;
+    return 1.5;
+}

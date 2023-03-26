@@ -17,10 +17,10 @@ export const longitudeLimit = 180;
 
 export const h3GeohashRatio: number = 0.8;
 export const h3AreaRatio: number = 1 / 5;
-export const h3AssetResolution: number = 9;
+export const h3ResolutionMax: number = 9;
+export const h3ResolutionLocation: number = 6;
 export const h3MinDiameter: number = 8;
 export const h3RingSize: number = 3;
-export const h3MaxResolution: number = 7;
 
 export const mapEditZoom = 14;
 

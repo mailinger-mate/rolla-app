@@ -52,7 +52,7 @@ import '@ionic/react/css/display.css';
 
 /* Theme variables */
 import './theme/variables.css';
-import GoogleMapProvider from './contexts/GoogleMap';
+import GoogleMapsProvider from './contexts/GoogleMap';
 import HostRoute from './pages/Host/Router';
 import RentRoute from './pages/Rent/Router';
 import { StationProvider } from './contexts/Station';
@@ -62,6 +62,7 @@ import { VehicleProvider } from './contexts/Vehicle';
 import { AgentProvider } from './contexts/Agent';
 import ContractProvider from './contexts/Contract';
 import { StorageProvider } from './contexts/Storage';
+import ThemeProvider from './contexts/Theme';
 
 // dotenv.config();
 
@@ -145,21 +146,23 @@ const AppWithContext = React.memo(() => {
     return (
         <FirebaseProvider>
             <LocationProvider>
-                <GoogleMapProvider>
+                <GoogleMapsProvider>
                     <AuthenticationProvider>
                         <ContractProvider>
                             {/* <StationProvider> */}
                                 <VehicleProvider>
                                     <StorageProvider>
                                         <AgentProvider>
-                                            <App />
+                                            <ThemeProvider>
+                                                <App />
+                                            </ThemeProvider>
                                         </AgentProvider>
                                     </StorageProvider>
                                 </VehicleProvider>
                             {/* </StationProvider> */}
                         </ContractProvider>
                     </AuthenticationProvider>
-                </GoogleMapProvider>
+                </GoogleMapsProvider>
             </LocationProvider>
         </FirebaseProvider>
     );

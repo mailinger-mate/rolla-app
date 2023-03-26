@@ -2,6 +2,7 @@ import React from 'react';
 import { getVehiclesAt } from '../utils/db/vehicle';
 import { Vehicle } from '../utils/db/vehicle';
 import { H3Aggregates, useH3Aggregates } from '../utils/hooks/useH3Aggregates';
+import { useH3Collection } from '../utils/hooks/useH3Collection';
 
 type Vehicles = Record<string, Vehicle>;
 
@@ -20,7 +21,7 @@ const useVehicleContext = () => React.useContext(VehicleContext);
 
 const VehicleProvider: React.FC = ({ children }) => {
     // const { zoom, setLocation } = useLocationContext();
-    const vehicles = {} // useGeohashCollection<Vehicle>(getVehiclesAt);
+    const vehicles = useH3Collection(getVehiclesAt); // useGeohashCollection<Vehicle>(getVehiclesAt);
     const vehiclesAggregate = useH3Aggregates(getVehiclesAt); //useGeohashCount<Vehicle>(getVehiclesAt);
 
     // const [isLocating, setLocating] = React.useState(false);
@@ -48,8 +49,11 @@ const VehicleProvider: React.FC = ({ children }) => {
 
     const context = React.useMemo<Context>(() => ({
         vehicles,
-        vehiclesAggregate: vehiclesAggregate,
-    }), [vehicles]);
+        vehiclesAggregate,
+    }), [
+        vehicles,
+        vehiclesAggregate,
+    ]);
 
     return (
         <VehicleContext.Provider value={context}>
