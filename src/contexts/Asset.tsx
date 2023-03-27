@@ -1,28 +1,28 @@
 import React from 'react';
-import { getVehiclesAt } from '../utils/db/vehicle';
-import { Vehicle } from '../utils/db/vehicle';
+import { getAssetsByH3Range } from '../utils/db/asset';
+import { Asset } from '../utils/db/asset';
 import { H3Aggregates, useH3Aggregates } from '../utils/hooks/useH3Aggregates';
 import { useH3Collection } from '../utils/hooks/useH3Collection';
 
-type Vehicles = Record<string, Vehicle>;
+type Vehicles = Record<string, Asset>;
 
 interface Context {
     vehicles?: Vehicles;
     vehiclesAggregate: H3Aggregates;
 }
 
-const VehicleContext = React.createContext<Context>({
+const AssetContext = React.createContext<Context>({
     vehiclesAggregate: {
         cells: {}
     }
 });
 
-const useVehicleContext = () => React.useContext(VehicleContext);
+const useAssetContext = () => React.useContext(AssetContext);
 
-const VehicleProvider: React.FC = ({ children }) => {
+const AssetProvider: React.FC = ({ children }) => {
     // const { zoom, setLocation } = useLocationContext();
-    const vehicles = useH3Collection(getVehiclesAt); // useGeohashCollection<Vehicle>(getVehiclesAt);
-    const vehiclesAggregate = useH3Aggregates(getVehiclesAt); //useGeohashCount<Vehicle>(getVehiclesAt);
+    const vehicles = useH3Collection(getAssetsByH3Range); // useGeohashCollection<Vehicle>(getVehiclesAt);
+    const vehiclesAggregate = useH3Aggregates(getAssetsByH3Range); //useGeohashCount<Vehicle>(getVehiclesAt);
 
     // const [isLocating, setLocating] = React.useState(false);
 
@@ -56,13 +56,13 @@ const VehicleProvider: React.FC = ({ children }) => {
     ]);
 
     return (
-        <VehicleContext.Provider value={context}>
+        <AssetContext.Provider value={context}>
             {children}
-        </VehicleContext.Provider>
+        </AssetContext.Provider>
     )
 };
 
 export {
-    VehicleProvider,
-    useVehicleContext,
+    AssetProvider,
+    useAssetContext,
 }

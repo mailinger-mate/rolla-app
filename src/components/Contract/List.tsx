@@ -3,13 +3,13 @@ import React from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useContractContext } from '../../contexts/Contract';
 import { useFirebaseContext } from '../../contexts/Firebase';
-import { useVehicleContext } from '../../contexts/Vehicle';
+import { useAssetContext } from '../../contexts/Asset';
 import { getContracts } from '../../utils/db/contract';
 
 const ContractList = React.memo(() => {
     // const { db } = useFirebaseContext();
     // const [contracts, loading, error] = useCollection(getContracts(db));
-    const { vehicles } = useVehicleContext();
+    const { vehicles } = useAssetContext();
     const { contracts } = useContractContext();
 
     const list = React.useMemo(() => {

@@ -1,7 +1,7 @@
 import { IonIcon, IonItem, IonItemOption, IonItemOptions, IonItemSliding, IonLabel, IonSpinner } from '@ionic/react';
 import { bluetooth, globe, key, lockClosed, lockOpen, moon } from 'ionicons/icons';
 import React from 'react';
-import { Vehicle } from '../../utils/db/vehicle';
+import { Asset } from '../../utils/db/asset';
 
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
     isTarget?: boolean;
     select?: () => void;
     disconnect?: () => void;
-    vehicle: Vehicle,
+    vehicle: Asset,
 }
 
 const VehicleListItem = React.memo<Props>(({

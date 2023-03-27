@@ -5,7 +5,7 @@ import { Path } from '../../path';
 import { useFirebaseContext } from '../../../contexts/Firebase';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { useDocument, useDocumentData, useDocumentOnce } from 'react-firebase-hooks/firestore';
-import { getVehicle, setVehicle } from '../../../utils/db/vehicle';
+import { getAsset, setAsset } from '../../../utils/db/asset';
 import { input } from '../../../components/Form/control';
 import EditSecurity from '../../../components/Security/Edit';
 import AddSecurity from '../../../components/Security/Add';
@@ -31,7 +31,7 @@ const VehicleItemPage: React.FC<Props> = ({ match }) => {
     const history = useHistory();
 
     // const { handleSubmit, setValue, register, formState } = useForm<Form>();
-    const [vehicle, loading, error] = useDocumentData(getVehicle(db, id));
+    const [vehicle, loading, error] = useDocumentData(getAsset(db, id));
     const [security, setSecurity] = React.useState<string>();
     const [station, setStation] = React.useState<Station>();
     const [present, dismiss] = useIonLoading();
@@ -67,7 +67,7 @@ const VehicleItemPage: React.FC<Props> = ({ match }) => {
         if (!data) return;
         const { h3Index, location } = data;
         present();
-        setVehicle(db, {
+        setAsset(db, {
             station: document.ref,
             h3Index,
             location,

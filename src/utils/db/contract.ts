@@ -1,6 +1,6 @@
 import { doc, DocumentData, Firestore, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, collection, query, orderBy, where, Timestamp, setDoc, QueryConstraint, } from "firebase/firestore";
 import { Path } from "./enums";
-import { Vehicle } from "./vehicle";
+import { Asset } from "./asset";
 
 enum Status {
     Approved = 200,
@@ -10,7 +10,7 @@ export interface Contract {
     status: Status;
     end: Timestamp;
     start: Timestamp;
-    asset: DocumentReference<Vehicle>;
+    asset: DocumentReference<Asset>;
     user: string;
 }
 

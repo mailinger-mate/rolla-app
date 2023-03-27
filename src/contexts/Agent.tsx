@@ -8,12 +8,12 @@ import { IonButton, IonButtons, IonContent, IonIcon, IonItem, IonItemDivider, Io
 import { bluetoothOutline, checkmarkOutline, key, lockClosedOutline, lockOpenOutline, mapOutline, moonOutline, radioOutline, sunnyOutline, warning } from 'ionicons/icons';
 import { useContractContext } from './Contract';
 import { PageHeader } from '../components/Layout/PageHeader';
-import { useVehicleContext } from './Vehicle';
+import { useAssetContext } from './Asset';
 import { Store, useStorageContext } from './Storage';
 import { DocumentReference, onSnapshot } from 'firebase/firestore';
 import { isAfter } from '../utils/datetime';
 import { VehicleListItem } from '../components/Vehicle/ListItem';
-import { getVehiclesByAgent, Vehicle } from '../utils/db/vehicle';
+import { getAssetsByAgent, Asset } from '../utils/db/asset';
 
 interface Context {
     select: (name?: string) => Promise<void>;
@@ -155,7 +155,7 @@ const AgentProvider = React.memo((props) => {
     }, []);
 
 
-    const [vehicles, setVehicles] = React.useState<Record<string, Vehicle>>();
+    const [vehicles, setVehicles] = React.useState<Record<string, Asset>>();
 
     // React.useEffect(() => {
     //     if (!agents.length) return;

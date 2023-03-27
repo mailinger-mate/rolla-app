@@ -4,10 +4,10 @@ import { RouteChildrenProps } from 'react-router';
 import { arrowRedo, call, navigateOutline, searchOutline } from 'ionicons/icons';
 import { useStationContext } from '../../contexts/Station';
 import { Map, MarkerColor, View } from '../../components/Map/Map';
-import { useVehicleContext } from '../../contexts/Vehicle';
+import { useAssetContext } from '../../contexts/Asset';
 
 import './Map.css';
-import { Vehicle } from '../../utils/db/vehicle';
+import { Asset } from '../../utils/db/asset';
 import { VehicleConnectButton } from '../../components/Vehicle/ConnectButton';
 import { PageHeader } from '../../components/Layout/PageHeader';
 import { ContractItem } from '../../components/Contract/Item';
@@ -24,7 +24,7 @@ enum Breakpoint {
 const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
     const { watchPosition, position } = useLocationContext();
     const { stations } = useStationContext();
-    const { vehicles } = useVehicleContext();
+    const { vehicles } = useAssetContext();
     const { hasLease } = useContractContext();
     const { select: select } = useAgentContext();
 
@@ -93,7 +93,7 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
 
     function reduceVehicles<Value>(
         stationId: string,
-        reducer: (value: Value, vehicle: Vehicle, vehicleId: string) => Value,
+        reducer: (value: Value, vehicle: Asset, vehicleId: string) => Value,
         initialValue: Value,
     ) {
         let value = initialValue;

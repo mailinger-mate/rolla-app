@@ -9,7 +9,7 @@ import { Path } from "./enums";
 import { Security } from "./security";
 import { Station } from "./station";
 
-export interface Vehicle {
+export interface Asset {
     free: boolean;
     h3Index: H3Index;
     isOnline: boolean;
@@ -22,14 +22,14 @@ export interface Vehicle {
 }
 
 const converter = {
-    toFirestore(vehicle: Vehicle): DocumentData {
-        return vehicle;
+    toFirestore(asset: Asset): DocumentData {
+        return asset;
     },
 
     fromFirestore(
         snapshot: QueryDocumentSnapshot,
         options: SnapshotOptions
-    ): Vehicle {
+    ): Asset {
         const {
             free,
             h3Index,
@@ -54,11 +54,11 @@ const converter = {
     }
 };
 
-export const getVehicle = (db: Firestore, id: string) => {
-    return doc(db, Path.vehicle, id).withConverter(converter);
+export const getAsset = (db: Firestore, id: string) => {
+    return doc(db, Path.asset, id).withConverter(converter);
 }
 
-export const getVehicles = (
+export const getAssets = (
     db: Firestore,
     stationId?: string
 ) => {
@@ -70,20 +70,15 @@ export const getVehicles = (
             doc(db, Path.station, stationId)
         ));
     }
-    return query(collection(db, Path.vehicle), ...constraints).withConverter(converter);
+    return query(collection(db, Path.asset), ...constraints).withConverter(converter);
 }
 
-interface VehiclesAtConstrains {
-    single?: boolean;
-    geohashesExcluded?: string[];
-}
-
-export const getVehiclesByAgent = (
+export const getAssetsByAgent = (
     db: Firestore,
     agentIds: string[],
 ) => {
     return getDocs(query(
-        collection(db, Path.vehicle),
+        collection(db, Path.asset),
         where(
             'agent',
             'in',
@@ -92,33 +87,32 @@ export const getVehiclesByAgent = (
     ).withConverter(converter));
 }
 
-export const getVehiclesAt = (
+export const getAssetsByH3Range = (
     db: Firestore,
-    h3IndexStart: H3Index,
-    h3IndexEnd: H3Index,
-    // { geohashesExcluded, single }: VehiclesAtConstrains = {}
+    h3Start: H3Index,
+    h3End: H3Index,
 ) => {
     // const [ start, end ] = geohashRange;
     const constrains: QueryConstraint[] = [
         orderBy('h3Index'),
-        startAt(h3IndexStart),
-        endAt(h3IndexEnd),
+        startAt(h3Start),
+        endAt(h3End),
     ];
     // console.log('geohash', start, end, geohashesExcluded)
     // if (geohashesExcluded?.length) constrains.push(where('geohash', 'not-in', geohashesExcluded));
     // if (single) constrains.push(limit(1));
 
     return query(
-        collection(db, Path.vehicle),
+        collection(db, Path.asset),
         ...constrains,
     ).withConverter(converter);
 };
 
-export const setVehicle = (db: Firestore, vehicle: Partial<Vehicle>, id?: string) => {
+export const setAsset = (db: Firestore, asset: Partial<Asset>, id?: string) => {
     const document = (id
-        ? doc(db, Path.vehicle, id)
-        : doc(collection(db, Path.vehicle))).withConverter(converter);
+        ? doc(db, Path.asset, id)
+        : doc(collection(db, Path.asset))).withConverter(converter);
     return id
-        ? updateDoc(document, vehicle)
-        : setDoc(document, vehicle).then(() => document.id);
+        ? updateDoc(document, asset)
+        : setDoc(document, asset).then(() => document.id);
 }

@@ -4,7 +4,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { input } from '../Form/control';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { useDocument } from 'react-firebase-hooks/firestore';
-import { getVehicle, setVehicle, Vehicle } from '../../utils/db/vehicle';
+import { getAsset, setAsset, Asset } from '../../utils/db/asset';
 import EditSecurity from '../Security/Edit';
 import { DocumentReference } from 'firebase/firestore';
 import AddSecurity from '../Security/Add';
@@ -17,7 +17,7 @@ type Form = {
 
 interface Props {
     id?: string;
-    vehicle?: Vehicle;
+    vehicle?: Asset;
     onCancel?: () => void;
     onSubmit?: () => void;
 }
@@ -56,7 +56,7 @@ const VehicleEdit = React.memo<Props>(({
         // console.log('state', formState.errors, formState.dirtyFields);
         console.log(name, model, licenseId);
         // const geohash = geohashForLocation([location.latitude, location.longitude]);
-        setVehicle(db, {
+        setAsset(db, {
             name,
             model,
             licenseId,

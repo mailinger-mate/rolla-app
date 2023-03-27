@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { IonBadge, IonButton, IonButtons, IonContent, IonDatetime, IonDatetimeButton, IonHeader, IonIcon, IonItem, IonItemDivider, IonLabel, IonList, IonListHeader, IonModal, IonNote, IonSelect, IonSelectOption, IonSpinner, IonTitle, IonToggle, IonToolbar, useIonLoading } from '@ionic/react';
-import { getVehicle, Vehicle } from '../../utils/db/vehicle';
+import { getAsset, Asset } from '../../utils/db/asset';
 import { setContract } from '../../utils/db/contract';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { Timestamp } from 'firebase/firestore';
@@ -11,7 +11,7 @@ import { bulbOutline, calendarOutline, cardOutline, checkmarkOutline, documentTe
 
 interface Props {
     id?: string;
-    vehicle?: Vehicle;
+    vehicle?: Asset;
     onCancel: () => void;
     onSubmit: () => void;
 }
@@ -62,7 +62,7 @@ const ContractItem = React.memo<Props>(({
         setContract(db, {
             start: new Timestamp(new Date(startDate).getTime() / 1000, 0),
             end: endDate ? new Timestamp(new Date(endDate).getTime() / 1000, 0) : undefined,
-            asset: id ? getVehicle(db, id) : undefined,
+            asset: id ? getAsset(db, id) : undefined,
             user: user.uid,
         }).then(() => {
             dismiss();

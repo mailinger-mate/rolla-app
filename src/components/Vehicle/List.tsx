@@ -3,7 +3,7 @@ import { IonButton, IonIcon, IonItem, IonItemDivider, IonItemSliding, IonLabel, 
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useFirebaseContext } from '../../contexts/Firebase';
 import { addOutline, cloudDone, cloudOfflineOutline, starOutline } from 'ionicons/icons';
-import { getVehicles } from '../../utils/db/vehicle';
+import { getAssets } from '../../utils/db/asset';
 
 interface Props {
     station?: string;
@@ -15,7 +15,7 @@ const VehicleList = React.memo<Props>(({
     station,
 }) => {
     const { db } = useFirebaseContext();
-    const [value, loading, error] = useCollection(getVehicles(db, station));
+    const [value, loading, error] = useCollection(getAssets(db, station));
     const [present, dismiss] = useIonLoading();
 
     React.useEffect(() => {

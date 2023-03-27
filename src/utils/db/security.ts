@@ -1,6 +1,6 @@
 import { doc, DocumentData, Firestore, getDoc, QueryDocumentSnapshot, SnapshotOptions, DocumentReference, collection, } from "firebase/firestore";
 import { Path } from "./enums";
-import { getVehicle } from "./vehicle";
+import { getAsset } from "./asset";
 
 export interface Security {
     // id: string;
@@ -38,7 +38,7 @@ export const getSecurity = (db: Firestore, id: string) => {
 }
 
 export const getVehicleSecurity = (db: Firestore, vehicleId: string) => {
-    return getDoc(getVehicle(db, vehicleId)).then(vehicle => {
+    return getDoc(getAsset(db, vehicleId)).then(vehicle => {
         const { security } = vehicle.data()!;
         return doc(db, security.path).withConverter(converter);
     });

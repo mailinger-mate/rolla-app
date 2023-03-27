@@ -2,8 +2,8 @@ import React from 'react';
 import { h3SetToFeatureCollection, h3ToFeature } from 'geojson2h3';
 import { useGoogleMapContext as useGoogleMapsContext } from '../../contexts/GoogleMap';
 import { Coordinates, useLocationContext } from '../../contexts/Location';
-import { useVehicleContext } from '../../contexts/Vehicle';
-import { Vehicle } from '../../utils/db/vehicle';
+import { useAssetContext } from '../../contexts/Asset';
+import { Asset } from '../../utils/db/asset';
 import { cellToBoundary, cellToLatLng, CoordPair, greatCircleDistance, gridDisk, H3Index, UNITS } from 'h3-js';
 import { Feature, Geometry, Polygon, Position } from 'geojson';
 import './Map.css';
@@ -173,7 +173,7 @@ const cellCenterId = 'Center';
 const pinPath = 'm24 12c-0.19 3.3-1.8 6.3-3.2 9.3-2.6 5.1-5.6 10-8.8 15-4-5.9-7.8-12-11-19-1.1-2.5-1.8-5.3-1.1-8.1 1.1-5.3 6.3-9.4 12-9.3 5.4-0.1 11 4 12 9.3 0.21 0.89 0.31 1.8 0.31 2.7z';
 
 const vehicleCount = (
-    vehicles?: Record<string, Vehicle>,
+    vehicles?: Record<string, Asset>,
     stationId?: string,
 ) => {
     if (!vehicles || !stationId) return;
@@ -225,7 +225,7 @@ const Map = React.memo<Props>(({
 }) => {
     const { location, position, setLocation, setScope } = useLocationContext();
     // const { stations } = useStationContext();
-    const { vehicles, vehiclesAggregate } = useVehicleContext();
+    const { vehicles, vehiclesAggregate } = useAssetContext();
     const googleMaps = useGoogleMapsContext();
     const { color } = useThemeContext();
 

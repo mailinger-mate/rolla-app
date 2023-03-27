@@ -58,7 +58,7 @@ import RentRoute from './pages/Rent/Router';
 import { StationProvider } from './contexts/Station';
 import { Path } from './pages/path';
 import { LocationProvider } from './contexts/Location';
-import { VehicleProvider } from './contexts/Vehicle';
+import { AssetProvider } from './contexts/Asset';
 import { AgentProvider } from './contexts/Agent';
 import ContractProvider from './contexts/Contract';
 import { StorageProvider } from './contexts/Storage';
@@ -150,7 +150,7 @@ const AppWithContext = React.memo(() => {
                     <AuthenticationProvider>
                         <ContractProvider>
                             {/* <StationProvider> */}
-                                <VehicleProvider>
+                                <AssetProvider>
                                     <StorageProvider>
                                         <AgentProvider>
                                             <ThemeProvider>
@@ -158,7 +158,7 @@ const AppWithContext = React.memo(() => {
                                             </ThemeProvider>
                                         </AgentProvider>
                                     </StorageProvider>
-                                </VehicleProvider>
+                                </AssetProvider>
                             {/* </StationProvider> */}
                         </ContractProvider>
                     </AuthenticationProvider>
