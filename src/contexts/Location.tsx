@@ -2,7 +2,7 @@ import React, { Reducer } from 'react';
 import { defaultCoordinates, defaultDiameter, h3ResolutionMax, h3AreaRatio, h3ResolutionLocation as h3ResolutionLocation } from '../config';
 import { Geolocation } from '@capacitor/geolocation';
 import { cellToChildren, H3Index, latLngToCell } from 'h3-js';
-import { roundNewCoordinates } from '../utils/geo/roundCoordinates';
+import { roundNewCoordinates } from '../utils/roundCoordinates';
 
 export type Coordinates = [number, number];
 

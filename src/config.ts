@@ -1,7 +1,7 @@
 import { dayMs } from "./utils/datetime";
 
-export const defaultCoordinates: [number, number] = [11, 102]; // [11.82, 102.48]; // [10.439540, 58.15282]; // [50, 10]; // [11.82, 102.48]; 
-export const defaultDiameter: number = 1000;
+export const defaultCoordinates: [number, number] = [11.82, 102.48] // [11, 102]; // [11.82, 102.48]; // [10.439540, 58.15282]; // [50, 10]; // [11.82, 102.48]; 
+export const defaultDiameter: number = 4;
 // export const minRadius: number = 10e3;
 // export const maxRadius: number = 10e6;
 

@@ -4,25 +4,41 @@ import { Asset } from '../utils/db/asset';
 import { H3Aggregates, useH3Aggregates } from '../utils/hooks/useH3Aggregates';
 import { useH3Collection } from '../utils/hooks/useH3Collection';
 
-type Vehicles = Record<string, Asset>;
+type Assets = Record<string, Asset>;
+type AssetsByStation = Record<string, number>;
 
 interface Context {
-    vehicles?: Vehicles;
-    vehiclesAggregate: H3Aggregates;
+    assets?: Assets;
+    assetsByLocation: H3Aggregates;
+    assetsByStation?: AssetsByStation;
 }
 
 const AssetContext = React.createContext<Context>({
-    vehiclesAggregate: {
+    assetsByLocation: {
         cells: {}
-    }
+    },
 });
 
 const useAssetContext = () => React.useContext(AssetContext);
 
-const AssetProvider: React.FC = ({ children }) => {
+const AssetProvider = React.memo(({ children }) => {
     // const { zoom, setLocation } = useLocationContext();
-    const vehicles = useH3Collection(getAssetsByH3Range); // useGeohashCollection<Vehicle>(getVehiclesAt);
-    const vehiclesAggregate = useH3Aggregates(getAssetsByH3Range); //useGeohashCount<Vehicle>(getVehiclesAt);
+    const assets = useH3Collection(getAssetsByH3Range);
+    const assetsByLocation = useH3Aggregates(getAssetsByH3Range);
+
+    const assetsByStation = React.useMemo<AssetsByStation | undefined>(() => {
+        if (!assets) return undefined;
+        const aggregate: AssetsByStation = {};
+        console.log({ assets })
+        for (const key in assets) {
+            const { station: { id } } = assets[key];
+            const count = aggregate[id] || 0;
+            aggregate[id] = count + 1;
+        }
+        return aggregate;
+    }, [
+        assets
+    ]);
 
     // const [isLocating, setLocating] = React.useState(false);
 
@@ -47,21 +63,21 @@ const AssetProvider: React.FC = ({ children }) => {
     //     setLocating(true);
     // }
 
-    const context = React.useMemo<Context>(() => ({
-        vehicles,
-        vehiclesAggregate,
-    }), [
-        vehicles,
-        vehiclesAggregate,
-    ]);
+    const context: Context = {
+        assets,
+        assetsByLocation,
+        assetsByStation,
+    };
 
     return (
         <AssetContext.Provider value={context}>
             {children}
         </AssetContext.Provider>
     )
-};
-
+});
+export type {
+    AssetsByStation,
+}
 export {
     AssetProvider,
     useAssetContext,

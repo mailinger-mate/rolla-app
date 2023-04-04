@@ -149,7 +149,7 @@ const AppWithContext = React.memo(() => {
                 <GoogleMapsProvider>
                     <AuthenticationProvider>
                         <ContractProvider>
-                            {/* <StationProvider> */}
+                            <StationProvider>
                                 <AssetProvider>
                                     <StorageProvider>
                                         <AgentProvider>
@@ -159,7 +159,7 @@ const AppWithContext = React.memo(() => {
                                         </AgentProvider>
                                     </StorageProvider>
                                 </AssetProvider>
-                            {/* </StationProvider> */}
+                            </StationProvider>
                         </ContractProvider>
                     </AuthenticationProvider>
                 </GoogleMapsProvider>

@@ -24,9 +24,9 @@ enum Breakpoint {
 const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
     const { watchPosition, position } = useLocationContext();
     const { stations } = useStationContext();
-    const { vehicles } = useAssetContext();
+    const { assets: vehicles } = useAssetContext();
     const { hasLease } = useContractContext();
-    const { select: select } = useAgentContext();
+    // const { select } = useAgentContext();
 
     const [stationId, setStationId] = React.useState<string>();
     const [vehicleId, setVehicleId] = React.useState<string>('esper');
@@ -109,7 +109,7 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
 
     const selectVehicle = (vehicleId: string) => {
         if (hasLease(vehicleId)) {
-            select();
+            // select();
         }
         else {
             setVehicleId(vehicleId);
@@ -379,11 +379,12 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
                     onDrag={minimizeStation}
                     onClick={hideAll}
                     onFocus={selectStation}
+                    // zoom={6}
                     // locationCell={true}
                     // centerMarker={MarkerColor.Primary}
                     // center={center}
                     // filter={filter}
-                    view={view}
+                    // view={view}
                 />
                 {fabs}
                 {searchModal}

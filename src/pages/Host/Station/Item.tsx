@@ -73,7 +73,7 @@ const Item: React.FC<Props> = ({ match }) => {
                     center={[latitude, longitude]}
                     // grid={false}
                     height="200px"
-                    drag={false}
+                    draggable={false}
                     scope={false}
                     centerMarker={MarkerColor.Disabled}
                     zoom={14}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { doc, DocumentData, Firestore, getDoc, QueryDocumentSnapshot, SnapshotOptions, GeoPoint, collection, query, setDoc, orderBy, deleteDoc, startAt, endAt, onSnapshot, QuerySnapshot } from 'firebase/firestore';
+import { doc, DocumentData, Firestore, getDoc, QueryDocumentSnapshot, SnapshotOptions, GeoPoint, collection, query, setDoc, orderBy, deleteDoc, startAt, endAt, onSnapshot, QuerySnapshot, QueryConstraint } from 'firebase/firestore';
 import { geohashQueryBounds, GeohashRange } from 'geofire-common';
 import { Path } from './enums';
 import { H3Index } from 'h3-js';
@@ -50,16 +50,19 @@ export const getStations = (db: Firestore) => {
     return query(collection(db, Path.station), orderBy('name')).withConverter(converter);
 }
 
-export const getStationsAt = (
+export const getStationsByH3Range = (
     db: Firestore,
-    geohashRange: GeohashRange,
+    h3Start: H3Index,
+    h3End: H3Index,
 ) => {
-    const [ start, end ] = geohashRange;
+    const constrains: QueryConstraint[] = [
+        orderBy('h3Index'),
+        startAt(h3Start),
+        endAt(h3End),
+    ];
     return query(
         collection(db, Path.station),
-        orderBy('geohash'),
-        startAt(start),
-        endAt(end)
+        ...constrains,
     ).withConverter(converter);
 };
 

@@ -9,7 +9,7 @@ import { getContracts } from '../../utils/db/contract';
 const ContractList = React.memo(() => {
     // const { db } = useFirebaseContext();
     // const [contracts, loading, error] = useCollection(getContracts(db));
-    const { vehicles } = useAssetContext();
+    const { assets: vehicles } = useAssetContext();
     const { contracts } = useContractContext();
 
     const list = React.useMemo(() => {

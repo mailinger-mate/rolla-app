@@ -7,22 +7,24 @@ const loader = new Loader({
     version: "weekly",
 }).load().then(google => google.maps);
 
-const GoogleMapContext = React.createContext<typeof google.maps | undefined>(undefined);
+type Context = Promise<typeof google.maps>;
+
+const GoogleMapContext = React.createContext<Context>(loader);
 
 export const useGoogleMapContext = () => React.useContext(GoogleMapContext);
 
 const GoogleMapProvider = React.memo(({ children }) => {
-    const [context, setContext] = React.useState<typeof google.maps | undefined>();
+    // const [context, setContext] = React.useState<typeof google.maps | undefined>();
 
-    React.useEffect(() => {
-        loader.then(googleMaps => {
-            console.log('gMaps', googleMaps.version);
-            setContext(googleMaps)
-        });
-    }, []);
+    // React.useEffect(() => {
+    //     loader.then(googleMaps => {
+    //         console.log('gMaps', googleMaps.version);
+    //         setContext(googleMaps)
+    //     });
+    // }, []);
 
     return (
-        <GoogleMapContext.Provider value={context}>
+        <GoogleMapContext.Provider value={loader}>
             {children}
         </GoogleMapContext.Provider>
     );

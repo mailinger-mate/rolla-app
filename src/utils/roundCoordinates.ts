@@ -1,5 +1,5 @@
-import { locationDecimals } from "../../config";
-import { Coordinates } from "../../contexts/Location";
+import { locationDecimals } from "../config";
+import { Coordinates } from "../contexts/Location";
 
 const roundCoordinate = (
     coordinate: number
