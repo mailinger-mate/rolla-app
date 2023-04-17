@@ -52,4 +52,6 @@ const ThemeProvider = React.memo((props) => {
 
 });
 
+ThemeProvider.displayName = 'ThemeProvider';
+
 export default ThemeProvider;

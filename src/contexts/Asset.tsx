@@ -75,6 +75,9 @@ const AssetProvider = React.memo(({ children }) => {
         </AssetContext.Provider>
     )
 });
+
+AssetProvider.displayName = 'AssetProvider';
+
 export type {
     AssetsByStation,
 }

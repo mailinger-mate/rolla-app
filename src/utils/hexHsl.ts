@@ -1,6 +1,11 @@
 export const hexToHSL = (
     hex: string,
-): [number, number, number] => {
+    transform?: (
+        h: number,
+        s: number,
+        l: number,
+    ) => [number, number, number],
+): string => {
 
     let r = parseInt("0x" + hex[1] + hex[2]) / 255,
         g = parseInt("0x" + hex[3] + hex[4]) / 255,
@@ -9,28 +14,30 @@ export const hexToHSL = (
     let min = Math.min(r, g, b),
         max = Math.max(r, g, b),
         delta = max - min,
-        hue = 0,
+        h = 0,
         s = 0,
         l = 0;
 
     if (delta == 0)
-        hue = 0;
+        h = 0;
     else if (max == r)
-        hue = ((g - b) / delta) % 6;
+        h = ((g - b) / delta) % 6;
     else if (max == g)
-        hue = (b - r) / delta + 2;
+        h = (b - r) / delta + 2;
     else
-        hue = (r - g) / delta + 4;
+        h = (r - g) / delta + 4;
 
-    hue = Math.round(hue * 60);
+    h = Math.round(h * 60);
 
-    if (hue < 0)
-        hue += 360;
+    if (h < 0)
+        h += 360;
 
     l = (max + min) / 2;
     s = delta == 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
     s = +(s * 100).toFixed(1);
     l = +(l * 100).toFixed(1);
+    
+    [h, s, l] = transform?.(h, s, l) || [h, s, l];
 
-    return [hue, s, l];
+    return `hsl(${h}, ${s}%, ${l}%)`;
 }

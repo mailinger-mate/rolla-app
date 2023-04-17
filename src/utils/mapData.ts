@@ -1,4 +1,6 @@
-import { Feature } from "geojson";
+import { Feature, GeoJsonProperties } from "geojson";
+
+// type Type = 'cellPolygon' | 'cellLabel' | 'marker';
 
 export const Property = {
     AssetsCount: 'assetsCount',
@@ -6,9 +8,11 @@ export const Property = {
     Index: 'index',
     IsLocation: 'isLocation',
     IsAsset: 'isAsset',
-    IsMarker: 'isMarker',
+    IsStation: 'isMarker',
     Label: 'label',
+    Type: 'type',
     Resolution: 'resolution',
+    Id: 'id',
 } as const;
 
 interface CellLabel {
@@ -19,19 +23,34 @@ interface CellLabel {
     [Property.Index]: string;
 }
 
-interface CellPolygon {
+interface Polygon {
+    type: Type;
+}
+
+export interface CellPolygon extends Polygon {
     [Property.AssetsCount]?: number;
     [Property.AssetsMax]?: number;
     [Property.Index]: string;
-    [Property.Resolution]: number;
+    // [Property.Resolution]: number;
     [Property.IsAsset]?: boolean;
     [Property.IsLocation]?: boolean;
 }
 
-interface Marker {
-    [Property.IsMarker]: boolean;
-    [Property.Resolution]: number;
-    [Property.Label]: number;
+export interface Marker {
+    [Property.IsStation]: boolean;
+    [Property.Resolution]?: number;
+    [Property.Label]?: number;
+}
+
+export enum Type {
+    StationMarker,
+    CellLabel,
+    CellPolygon,
+};
+
+interface Point {
+    [Property.Label]: number | string;
+    type: Type;
 }
 
 export function setProperty<K extends keyof (CellLabel & CellPolygon)>(
@@ -50,12 +69,28 @@ export function getProperty<K extends keyof (CellLabel & CellPolygon)>(
     return feature.getProperty(key);
 }
 
-export function cellLabel<P extends (CellLabel | Marker)>(
+const stationPrefix = 'station:';
+
+export const prefixStationMarker = (
+    id: string
+): string => {
+    return stationPrefix + id; 
+}
+
+export const prefixCellLabel = (
+    h3Index: string
+): string => {
+    return h3Index + 'Label';
+}
+
+export function point<P extends GeoJsonProperties>(
+    id: string,
     [longitude, latitude]: [number, number],
     properties: P,
 ): Feature {
     return {
         type: 'Feature',
+        id,
         geometry: {
             type: 'Point',
             coordinates: [latitude, longitude],
@@ -64,11 +99,20 @@ export function cellLabel<P extends (CellLabel | Marker)>(
     };
 }
 
-export const cellPolygon = (
+// export const stationPoint = (
+//     id: string,
+//     coordinates: [number, number],
+//     properties: Exclude<Point, 'type'>,
+// ): Feature => {
+//     properties.type === Type.Station;
+//     return point(id, coordinates, properties);
+// }
+
+export function polygon<P extends GeoJsonProperties>(
     id: string,
     coordinates: [number, number][],
-    properties: CellPolygon,
-): Feature => {
+    properties: P,
+): Feature {
     return {
         type: 'Feature',
         id,

@@ -35,6 +35,11 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
     const [center, setCenter] = React.useState<string[] | boolean>(true);
     // const [filter, setFilter] = React.useState(false);
 
+
+    const [isSearchOpen, setSearchOpen] = React.useState(false);
+    const [search, setSearch] = React.useState<string>();
+    const searchBarRef = React.useRef<HTMLIonSearchbarElement>(null);
+
     const [isStationOpen, setStationOpen] = React.useState(false);
     const stationModalRef = React.useRef<HTMLIonModalElement>(null);
 
@@ -43,7 +48,7 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
     //     setCenter([stationId]);
     // }, [stationId]);
 
-    const selectStation = (id: string) => {
+    const selectStation = React.useCallback((id: string) => {
         if (!id) return;
         console.log('selectStation', id);
         setStationId(id);
@@ -52,7 +57,7 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
         stationModalRef.current?.setCurrentBreakpoint(0.5);
         setCenter([id]);
         setPadding(Breakpoint.Station);
-    };
+    }, []);
 
     // const openStation = React.useCallback((breakpoint: Breakpoint) => {
     //     // stationModalRef.current?.setCurrentBreakpoint(breakpoint);
@@ -218,14 +223,10 @@ const MapPage = React.memo<RouteChildrenProps>(({ match }) => {
         });
     }, [isStationMiminized]);
 
-    const hideAll = () => {
+    const hideAll = React.useCallback(() => {
         setStationOpen(false);
         setSearchOpen(false);
-    }
-
-    const [isSearchOpen, setSearchOpen] = React.useState(false);
-    const [search, setSearch] = React.useState<string>();
-    const searchBarRef = React.useRef<HTMLIonSearchbarElement>(null);
+    }, []);
 
     const stationList = React.useMemo(() => {
         if (!stations || !isSearchOpen) return null;

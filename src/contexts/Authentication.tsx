@@ -162,4 +162,6 @@ const AuthenticationProvider = React.memo((props) => {
     );
 });
 
+AuthenticationProvider.displayName = 'AuthProvider';
+
 export default AuthenticationProvider;

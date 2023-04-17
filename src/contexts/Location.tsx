@@ -1,10 +1,12 @@
 import React, { Reducer } from 'react';
-import { defaultCoordinates, defaultDiameter, h3ResolutionMax, h3AreaRatio, h3ResolutionLocation as h3ResolutionLocation } from '../config';
+import { defaultCoordinates, defaultDiameter, h3ResolutionMax, h3AreaRatio, h3ResolutionLocation as h3ResolutionLocation, locationDecimals } from '../config';
 import { Geolocation } from '@capacitor/geolocation';
 import { cellToChildren, H3Index, latLngToCell } from 'h3-js';
-import { roundNewCoordinates } from '../utils/roundCoordinates';
 
-export type Coordinates = [number, number];
+export type Coordinates = {
+    lat: number;
+    lng: number;
+};
 
 const h3Resolutions = [1100, 420, 160, 60, 20, 8, 3, 1, 0.5, 0.17, 0.06, 0.02, 0.009, 0.003, 0.001];
 
@@ -44,7 +46,7 @@ interface Context {
     // geohashRanges?: GeohashRange[];
     // geohashRangesExcluded?: string[][];
     // cell?: Cell;
-    location: Location;
+    location?: Location;
     // locationRadius?: number;
     position?: Coordinates;
     scope?: boolean;
@@ -96,18 +98,22 @@ const cellToRange = (
 //     return [cells[0], cells[cells.length - 1]]
 // }
 
-const calculateLocation = ({
-    coordinates,
-    diameter,
-}: Circle): Location => {
-    const [latitude, longitude] = coordinates;
+const calculateLocation = (
+    { coordinates, diameter }: Circle,
+    state?: Location,
+): Location => {
+    const { lat, lng } = coordinates;
+
+    if (state?.coordinates.lat === lat
+        && state?.coordinates.lng === lng
+        && state?.diameter === diameter) return state;
 
     const h3Resolution = areaToResolution(diameter * h3AreaRatio);
-    const h3Index = latLngToCell(latitude, longitude, h3Resolution);
-    const h3IndexMax = latLngToCell(latitude, longitude, h3ResolutionMax);
+    const h3Index = latLngToCell(lat, lng, h3Resolution);
+    const h3IndexMax = latLngToCell(lat, lng, h3ResolutionMax);
     const [h3RangeStart, h3RangeEnd] = cellToRange(h3Index, h3Resolution);
 
-    console.log('Location', { h3Resolution, h3Index });
+    console.log('Location', h3Index, h3Resolution, coordinates, diameter);
 
     return {
         coordinates,
@@ -120,56 +126,6 @@ const calculateLocation = ({
     };
 }
 
-// const calculateCell = (
-//     { coordinates, diameter }: Partial<Circle>,
-//     state?: Location,
-// ): Location => {
-//     if (!coordinates && !diameter) return state;
-//     const roundedCoordinates = roundNewCoordinates(coordinates);
-//     const roundedDiameter = Math.round(diameter);
-
-//     if (state) {
-//         const [stateLatitude, stateLongitude] = state.coordinates;
-//         console.log('cell diff', stateLatitude, latitude, stateLongitude, longitude, state.diameter, diameter)
-//         if (
-//             latitude == stateLatitude
-//             && longitude === stateLongitude
-//             && diameter === state.diameter
-//         ) {
-//             return state;
-//         }
-//     }
-
-//     const h3Resolution = areaToResolution(diameter * h3AreaRatio);
-//     const h3Index = latLngToCell(latitude, longitude, h3Resolution);
-//     const h3AssetIndex = latLngToCell(latitude, longitude, h3AssetResolution);
-
-//     const h3Range = state && state.h3Index === h3Index
-//         ? state.h3Range
-//         : cellToRange(h3Index, h3Resolution);
-
-
-//     // const geohashRanges = geohashQueryBounds(h3Center, h3Radius * h3GeohashRatio);
-//     // const geohashesSorted = sortGeohashes(geohashRanges, h3Center, h3Radius);
-//     // console.log('h3Children', cellToChildren(h3Index, 9));
-
-//     // console.log('h3', diameter, h3Index, h3Resolution, h3Range);
-
-//     // console.log('sorted', JSON.stringify(geohashesSorted.map(([outside, inside]) => inside)));
-//     return {
-//         coordinates: [latitude, longitude],
-//         diameter,
-//         h3AssetIndex,
-//         h3Index,
-//         h3Resolution,
-//         // coordinates,
-//         // geohashRanges,
-//         // geohashesSorted,
-//         h3Range,
-//         // diameter,
-//     };
-// }
-
 const defaultLocation: Circle = {
     coordinates: defaultCoordinates,
     diameter: defaultDiameter,
@@ -177,7 +133,7 @@ const defaultLocation: Circle = {
 
 const LocationContext = React.createContext<Context>({
     // cell: calculateCell(defaultLocation),
-    location: calculateLocation(defaultLocation),
+    location: undefined,
     // getAssetCell: () => latLngToAssetCell(defaultCoordinates),
     setLocation: () => undefined,
     setScope: () => true,
@@ -195,7 +151,7 @@ const useDifferentCoordinates = (
     after: Coordinates,
 ) => {
     if (!before && after) return after;
-    if (before && after && after[0] !== before[0] && after[1] !== before[1]) return after;
+    if (before && after && after.lat !== before.lat && after.lng !== before.lng) return after;
     return before;
 };
 
@@ -208,167 +164,93 @@ const useDifferentCoordinates = (
 
 // }
 
+const roundCoordinate = (
+    coordinate: number
+): number => {
+    return +coordinate.toFixed(locationDecimals);
+}
+
+export const roundNewCoordinates = (
+    after?: Coordinates,
+    before?: Coordinates,
+): Coordinates | undefined => {
+    if (!after) return before;
+    const { lat: latAfter, lng: lngAgter } = after;
+    const lat = roundCoordinate(latAfter);
+    const lng = roundCoordinate(lngAgter);
+    if (lat !== before?.lat || lng !== before?.lng) return { lat, lng };
+    return before;
+}
+
+const roundNewDiameter = (
+    after?: number,
+    before?: number,
+): number | undefined => {
+    if (!after) return before;
+    const diameter = Math.round(after);
+    if (diameter !== before) return diameter;
+    return before;
+}
+
 const LocationProvider = React.memo(({ children }) => {
     const [position, setPosition] = React.useReducer(useDifferentCoordinates, undefined);
 
-    // const [location, setLocation] = React.useReducer(useDifferent, defaultLocation as Coordinates);
-    // const [locationBounds, setLocationBounds] = React.useState<[Coordinates, Coordinates]>();
-    // const [location, setLocation] = React.useState<Circle>({
-    //     coordinates: defaultLocation,
-    //     radius: defaultRadius,
-    // });
-
-    // const [location, setLocation] = React.useReducer<Reducer<Circle, Partial<Circle>>>((
-    //     state,
-    //     { coordinates, radius },
-    // ) => {
-    //     return {
-    //         coordinates: coordinates || state.coordinates,
-    //         radius: radius || state.radius,
-    //     };
-    // }, {
-    //     coordinates: defaultLocation,
-    //     radius: defaultRadius,
-    // })
-
-    // const [loco, setLoco] = React.useReducer((
-    //     state: LocationState | undefined,
-    //     { coordinates, radius }: Loco
-    // ) => {
-    //     const area = 
-    //     return state;
-    // }, undefined);
-
-    // const [geohashRanges, setGeohashRanges] = React.useReducer((
-    //     before: GeohashRange[] | undefined,
-    //     after: GeohashRange[],
-    // ) => {
-    //     if (!before && after) return after;
-    //     if (before && after) {
-    //         const isEqual = before.length === after.length && after.every(([startAfter, endAfter], index) => {
-    //             const [startBefore, endBefore] = before[index];
-    //             return startAfter === startBefore && endAfter === endBefore;
-    //         });
-    //         if (!isEqual) return after;
-    //     }
-    //     return before;
-    // }, undefined);
-
-    // const [geohashRangesExcluded, setGeohashRangesExlcuded] = React.useState<string[][]>();
-
-    // const [area, setArea] = React.useState<Coordinates>();
-    // const [areaRadius, setAreaRadius] = React.useState(defaultRadius);
-
-    // const zoom = React.useCallback((
-    //     direction: 'in' | 'out' | undefined,
-    // ) => {
-    //     if (!direction) return areaRadius;
-    //     if (direction === 'in' && areaRadius < minRadius || areaRadius > maxRadius) return;
-    //     setAreaRadius(areaRadius * (direction === 'in' ? 0.25 : 4));
-    // }, [areaRadius]);
-
-
-    // const [cell, setCell] = React.useReducer((
-    //     before: Cell | undefined,
-    //     after: Cell,
-    // ) => {
-    //     if (after && after.h3Index !== before?.h3Index) return after;
-    //     return before;
-    // }, undefined);
-    // const [cellIndex, setCellIndex] = React.useState<string>();
-    // const [cellRadius, setCellRadius] = React.useState<number>();
-    // const [cellResolution, setCellResolution] = React.useState<number>();
-
-    // const [areaDisk, setAreaDisk] = React.useState<string[]>();
-
-    // React.useEffect(() => {
-    //     if (!location) return;
-    //     // if (!area) return setArea(location);
-    //     // if (!locationBounds) return;
-
-    //     // const locationRadius = Math.ceil(distanceBetween(...locationBounds) / 20) * km;
-    //     // setLocationRadius(locationRadius);
-    //     // console.log('location radius', locationRadius)
-    //     // const distance = Math.round(distanceBetween(location, area)) * 1e3;
-    //     // console.log('area distance', distance);
-    //     // console.log('scale', locationRadius / radius)
-
-    //     // const isOutside = radius < (Math.sqrt((location[0] - area[0]) ^ 2 + (location[1] - area[1]) ^ 2)) + locationRadius;
-
-    //     // const isOutside = distance + locationRadius > radius;
-
-    //     if (locationRadius < radius / 3 || locationRadius > radius * 2 / 3) {
-    //         setRadius(locationRadius * 2);
-    //     }
-    //     // if (isOutside) {
-    //     //     setArea(location);
-    //     // }
-    // }, [
-    //     // area,
-    //     radius,
-    //     location,
-    //     locationBounds,
-    // ]);
-
-    // React.useEffect(() => {
-    //     if (!locationBounds) return;
-    //     const locationRadius = Math.ceil(distanceBetween(...locationBounds) / 20) * km;
-    //     console.log('locationRadius', locationRadius);
-    //     setLocationRadius(locationRadius);
-    // }, [locationBounds]);
-
-    // React.useEffect(() => {
-    //     if (!locationRadius) return;
-    //     if (areaRadius && locationRadius > areaRadius / 3 && locationRadius < areaRadius * 2 / 3) return;
-    //     console.log('areaRadius')
-    //     setAreaRadius(locationRadius * 2);
-
-    // }, [locationRadius, areaRadius]);
-
-    // React.useEffect(() => {
-    //     if (!location) return;
-    //     if (!area) return setArea(location);
-    //     const distance = Math.round(distanceBetween(location, area)) * km;
-    //     const isOutside = distance + locationRadius > areaRadius;
-    //     if (isOutside) setArea(location);
-    // }, [area, areaRadius, location]);
-
-    // const [location, setLocation] = React.useState<Circle>({
-    //     coordinates: defaultCoordinates,
-    //     diameter: defaultDiameter,
-    // });
-
     const [scope, setScope] = React.useState(true);
 
-    const [location, setLocation] = React.useReducer<
-        Reducer<Location, Partial<Circle>>,
-        Circle
-    >(
-        (
-            state,
-            { coordinates: coordinatesAfter, diameter: diameterAfter }
-        ) => {
-            if (!coordinatesAfter && !diameterAfter) return state;
+    const [location, setLocation] = React.useReducer((
+        state: Location | undefined,
+        { coordinates: coordinatesAfter, diameter: diameterAfter }: Partial<Circle>
+    ) => {
+        if (!coordinatesAfter && !diameterAfter) return state;
 
-            const {
-                coordinates: coordinatesBefore,
-                diameter: diameterBefore,
-            } = state;
-            const coordinates = roundNewCoordinates(coordinatesBefore, coordinatesAfter);
-            const diameter = diameterAfter && Math.round(diameterAfter);
-            if (!coordinates && !diameter) return state;
+        // if (!state) return 
+        // const {
+        //     coordinates: coordinatesBefore,
+        //     diameter: diameterBefore,
+        // } = state;
+        
+        const coordinates = roundNewCoordinates(coordinatesAfter, state?.coordinates);
+        const diameter = roundNewDiameter(diameterAfter, state?.diameter);
 
-            return calculateLocation({
-                coordinates: coordinates || coordinatesBefore,
-                diameter: diameter || diameterBefore,
-            });
-        },
-        {
-            coordinates: defaultCoordinates,
-            diameter: defaultDiameter,
-        },
-        calculateLocation,
-    );
+        if (!coordinates || !diameter) return state;
+
+        return calculateLocation({
+            coordinates,
+            diameter,
+        }, state);
+
+    }, undefined);
+
+    // const [location, setLocation] = React.useReducer<
+    //     Reducer<Location, Partial<Circle>>,
+    //     undefined
+    // >(
+    //     (
+    //         state,
+    //         { coordinates: coordinatesAfter, diameter: diameterAfter }
+    //     ) => {
+    //         if (!coordinatesAfter && !diameterAfter) return state;
+
+    //         const {
+    //             coordinates: coordinatesBefore,
+    //             diameter: diameterBefore,
+    //         } = state;
+    //         const coordinates = roundNewCoordinates(coordinatesBefore, coordinatesAfter);
+    //         const diameter = diameterAfter && Math.round(diameterAfter);
+    //         if (!coordinates && !diameter) return state;
+
+    //         return calculateLocation({
+    //             coordinates: coordinates || coordinatesBefore,
+    //             diameter: diameter || diameterBefore,
+    //         });
+    //     },
+    //     {
+    //         coordinates: defaultCoordinates,
+    //         diameter: defaultDiameter,
+    //     },
+    //     // undefined,
+    //     calculateLocation,
+    // );
 
     // const getAssetCell = React.useCallback(() => {
     //     return latLngToAssetCell(location.coordinates);
@@ -443,8 +325,8 @@ const LocationProvider = React.memo(({ children }) => {
             maximumAge: 30000,
         }, (position) => {
             if (!position) return;
-            const { latitude, longitude } = position.coords;
-            setPosition([latitude, longitude]);
+            const { latitude: lat, longitude: lng } = position.coords;
+            setPosition({ lat, lng });
         });
     }, []);
 
@@ -499,6 +381,8 @@ const LocationProvider = React.memo(({ children }) => {
         </LocationContext.Provider>
     );
 });
+
+LocationProvider.displayName = 'LocationProvider';
 
 export {
     LocationProvider,

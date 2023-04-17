@@ -21,12 +21,18 @@ interface Props {
     onSubmit: () => void;
 }
 
+enum Field {
+    Latitude = 'latitude',
+    Longitude = 'longitude',
+}
+
 type Form = {
     address?: string;
-    latitude?: number;
-    longitude?: number;
+    [Field.Latitude]?: number;
+    [Field.Longitude]?: number;
     name?: string;
 }
+
 
 const StationEdit = React.memo<Props>(({
     id,
@@ -36,16 +42,16 @@ const StationEdit = React.memo<Props>(({
 }) => {
     const { db } = useFirebaseContext();
     const { location, setLocation } = useLocationContext();
-    const history = useHistory();
+    // const history = useHistory();
 
-    const { coordinates } = location;
+    // const { coordinates } = location;
     const { name, address, location: geopoint } = station || {};
 
     const values: Form = {
         address,
         name,
-        latitude: geopoint?.latitude,
-        longitude: geopoint?.longitude
+        [Field.Latitude]: geopoint?.latitude,
+        [Field.Longitude]: geopoint?.longitude
     }
 
     const { handleSubmit, setValue, register, watch, control } = useForm<Form>({
@@ -61,21 +67,24 @@ const StationEdit = React.memo<Props>(({
     //     required: true,
     // });
 
-    const [latitude, longitude] = watch(['latitude', 'longitude']);
+    const [lat, lng] = watch([Field.Latitude, Field.Longitude]);
     
     React.useEffect(() => {
-        if (!latitude || !longitude) return;
-        console.log('latitude', latitude, longitude);
+        if (!lat || !lng) return;
+        console.log('latitude', lat, lng);
         setLocation({
-            coordinates: [latitude, longitude],
+            coordinates: { lat, lng },
         })
-    }, [latitude, longitude]);
+    }, [lat, lng]);
 
     React.useEffect(() => {
-        const [latitude, longitude] = coordinates
-        setValue('latitude', latitude);
-        setValue('longitude', longitude);
-    }, [coordinates]);
+        if (!location?.coordinates) return;
+        const { lat, lng } = location.coordinates
+        setValue(Field.Latitude, lat);
+        setValue(Field.Longitude, lng);
+    }, [
+        location?.coordinates
+    ]);
 
 
     // React.useEffect(() => {
@@ -101,20 +110,21 @@ const StationEdit = React.memo<Props>(({
 
     const center = React.useMemo<Coordinates | undefined>(() => {
         if (!station) return;
-        const { latitude, longitude } = station.location;
-        return [latitude, longitude];
+        const { latitude: lat, longitude: lng } = station.location;
+        return { lat, lng };
     }, []); 
 
     const saveStation: SubmitHandler<Form> = ({ name, address }) => {
         // console.log('state', formState.errors, formState.dirtyFields);
         // if (!location) throw new Error('No location');
-        const { coordinates, h3IndexMax: h3AssetIndex } = location;
-        console.log('saveStation', name, address, coordinates, h3AssetIndex);
+        if (!location) return;
+        const { coordinates: { lat, lng }, h3IndexMax: h3AssetIndex } = location;
+        // console.log('saveStation', name, address, coordinates, h3AssetIndex);
         // const geohash = geohashForLocation([location.latitude, location.longitude]);
         setStation(db, {
             name,
             address,
-            location: new GeoPoint(...coordinates),
+            location: new GeoPoint(lat, lng),
             h3Index: h3AssetIndex,
         }, id).then(id => {
             // history.push(`/${Path.host}/${Path.station}/${id}`)
@@ -204,8 +214,8 @@ const StationEdit = React.memo<Props>(({
                         control,
                     })}
                     {input2<Form>({
-                        onChange: value => setValue('latitude', +value),
-                        name: 'latitude',
+                        onChange: value => setValue(Field.Latitude, +value),
+                        name: Field.Latitude,
                         label: 'Latitude',
                         type: 'number',
                         step: locationStep,
@@ -214,8 +224,8 @@ const StationEdit = React.memo<Props>(({
                         control,
                     })}
                     {input2<Form>({
-                        onChange: value => setValue('longitude', +value),
-                        name: 'longitude',
+                        onChange: value => setValue(Field.Longitude, +value),
+                        name: Field.Longitude,
                         label: 'Longitude',
                         type: 'number',
                         step: locationStep,

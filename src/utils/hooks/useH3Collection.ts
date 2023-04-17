@@ -16,17 +16,19 @@ export const useH3Collection = <
 ) => {
     const { db } = useFirebaseContext();
     const {
-        location: {
-            h3RangeStart,
-            h3RangeEnd,
-            h3Resolution
-        },
+        location,
         scope,
     } = useLocationContext();
 
     const [collection, setCollection] = React.useState<Record<string, Document>>();
 
     React.useEffect(() => {
+        if (!location) return;
+        const {
+            h3RangeStart,
+            h3RangeEnd,
+            h3Resolution,
+        } = location;
         if (!scope || h3Resolution <= h3ResolutionLocation) return setCollection(undefined);
 
         getDocs(query(db, h3RangeStart, h3RangeEnd))
@@ -51,9 +53,9 @@ export const useH3Collection = <
                     });
             })
     }, [
-        h3RangeStart,
-        h3RangeEnd,
-        h3Resolution,
+        location?.h3RangeStart,
+        location?.h3RangeEnd,
+        location?.h3Resolution,
         scope,
     ])
 

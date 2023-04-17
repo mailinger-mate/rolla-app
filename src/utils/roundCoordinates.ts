@@ -8,17 +8,12 @@ const roundCoordinate = (
 }
 
 export const roundNewCoordinates = (
-    oldCoordinates: Coordinates,
+    oldCoordinates?: Coordinates,
     coordinates?: Coordinates,
 ): Coordinates | undefined => {
     if (!coordinates) return;
-    const [oldLatitude, oldLongitude] = oldCoordinates;
-    const [latitude, longitude] = coordinates;
-    const roundLatitde = roundCoordinate(latitude);
-    const roundLongitude = roundCoordinate(longitude);
-    if (roundLatitde === oldLatitude && roundLongitude === oldLongitude) return;
-    return [
-        roundLatitde,
-        roundLongitude,
-    ];
+    const { lat: newLatitude, lng: newLongitude } = coordinates;
+    const lat = roundCoordinate(newLatitude);
+    const lng = roundCoordinate(newLongitude);
+    if (!oldCoordinates || lat !== oldCoordinates.lat || lng !== oldCoordinates.lng) return { lat, lng, };
 }

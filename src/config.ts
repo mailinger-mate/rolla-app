@@ -1,7 +1,7 @@
 import { dayMs } from "./utils/datetime";
 
-export const defaultCoordinates: [number, number] = [11.82, 102.48] // [11, 102]; // [11.82, 102.48]; // [10.439540, 58.15282]; // [50, 10]; // [11.82, 102.48]; 
-export const defaultDiameter: number = 4;
+export const defaultCoordinates = { lat: 11.82, lng: 102.48 }; // [11, 102]; // [11.82, 102.48]; // [10.439540, 58.15282]; // [50, 10]; // [11.82, 102.48]; 
+export const defaultDiameter: number = 1000;
 // export const minRadius: number = 10e3;
 // export const maxRadius: number = 10e6;
 
@@ -20,7 +20,7 @@ export const h3AreaRatio: number = 1 / 5;
 export const h3ResolutionMax: number = 9;
 export const h3ResolutionLocation: number = 6;
 export const h3MinDiameter: number = 8;
-export const h3RingSize: number = 3;
+export const h3RingSize: number = 5;
 
 export const mapEditZoom = 14;
 

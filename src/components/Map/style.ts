@@ -1,3 +1,4 @@
+import { getResolution } from "h3-js";
 import { h3ResolutionLocation } from "../../config";
 import { Token, ColorTheme } from "../../theme/theme";
 import { hexToHSL } from "../../utils/hexHsl";
@@ -182,14 +183,14 @@ export const styleMap = (color: ColorTheme) => {
     ]
 };
 
-export const cellFillColor = (
-    assetsCount?: number,
-    assetsMax?: number,
-    isLocation = false,
-) => {
-    if (!assetsCount || !assetsMax) return;
-    return `hsl(120deg, ${Math.max(Math.round(assetsCount / assetsMax * 100), 10)}%, ${50 + +isLocation * 15}%)`;
-};
+// export const cellFillColor = (
+//     assetsCount?: number,
+//     assetsMax?: number,
+//     isLocation = false,
+// ) => {
+//     if (!assetsCount || !assetsMax) return;
+//     return `hsl(120deg, ${Math.max(Math.round(assetsCount / assetsMax * 100), 10)}%, ${50 + +isLocation * 15}%)`;
+// };
 
 export const cellFillOpacity = (
     assetsCount?: number,
@@ -206,10 +207,10 @@ export const cellZIndex = (
     isAsset?: boolean,
     isLocation?: boolean,
 ): number => {
-    if (isAsset) return 30;
-    if (isLocation) return 20;
-    if (assetsCount) return 10;
-    return 1;
+    if (isAsset) return 3000;
+    if (isLocation) return 2000;
+    if (assetsCount) return 1000;
+    return 100;
 }
 
 export const cellStrokeColorToken = (
@@ -224,8 +225,8 @@ export const cellStrokeColorToken = (
 export const cellStrokeWeight = (
     resolution: number,
 ): number => {
-    if (resolution > h3ResolutionLocation) return 2;
-    return 1.5;
+    if (resolution > h3ResolutionLocation) return 2.5;
+    return 2;
 }
 
 export const styleMarker = (
@@ -238,7 +239,7 @@ export const styleMarker = (
             strokeOpacity: 0,
             fillOpacity: 1,
             fillColor: color[Token.Primary],
-            scale: 10,
+            scale: 12,
         },
         label: {
             text: '' + label,
@@ -262,10 +263,11 @@ export const styleCellLabel = (
             text: '' + label,
             color: color[Token.MonoLow4],
             className: 'cellLabel',
-            fontSize: '2.5vmin',
+            fontSize: '1.5em',
         },
-        opacity: label !== null ? 1 : 0,
+        // opacity: label !== null ? 1 : 0,
         zIndex: 5,
+        clickable: false,
     };
 }
 
@@ -277,18 +279,30 @@ export const styleCell = (
     const assetsCount = getProperty(feature, Property.AssetsCount);
     const assetsMax = getProperty(feature, Property.AssetsMax);
     const isAsset = getProperty(feature, Property.IsAsset);
-    const isLocation = getProperty(feature, Property.IsLocation);
-    const resolution = getProperty(feature, Property.Resolution);
-    const isAggregate = resolution <= h3ResolutionLocation;
+    const isLocation = getProperty(feature, Property.IsLocation) || false;
+    // const resolution = getProperty(feature, Property.Resolution);
 
-    const fillColor = cellFillColor(assetsCount, assetsMax, isLocation);
+    const h3Index = getProperty(feature, Property.Index);
+    const h3Resolution = getResolution(h3Index);
+    const isAggregate = h3Resolution <= h3ResolutionLocation;
+
+
+    const fillColor = assetsCount && assetsMax &&
+        hexToHSL(
+            color[Token.Primary],
+            (h, s, l) => [
+                h,
+                Math.round(Math.max(assetsCount / assetsMax, 0.3) * s),
+                l + +isLocation * 5
+            ]);
 
     return {
-        strokeColor: !isAggregate && fillColor || color[cellStrokeColorToken(isAsset, isLocation)],
-        strokeWeight: cellStrokeWeight(resolution),
-        strokeOpacity: 0.5,
-        fillOpacity: cellFillOpacity(assetsCount, isAggregate),
+        strokeColor: fillColor || color[cellStrokeColorToken(isAsset, isLocation)],
+        strokeWeight: cellStrokeWeight(h3Resolution),
+        strokeOpacity: 0.8,
+        fillOpacity: 0, //cellFillOpacity(assetsCount, isAggregate),
         fillColor: fillColor || color[Token.MonoLow2],
         zIndex: cellZIndex(assetsCount, isAsset, isLocation),
+        clickable: false,
     };
 }

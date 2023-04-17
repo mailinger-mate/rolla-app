@@ -13,7 +13,7 @@ type Props = RouteComponentProps<{
     id: string;
 }>
 
-const Item: React.FC<Props> = ({ match }) => {
+const Item = React.memo<Props>(({ match }) => {
     const { id } = match.params;
     const { db } = useFirebaseContext();
     const [station, loading, error] = useDocumentData(getStation(db, id));
@@ -40,10 +40,26 @@ const Item: React.FC<Props> = ({ match }) => {
         );
     }, [modal])
 
-    if (!station) return null;
+    const mapElement = React.useMemo(() => {
+        if (!station) return;
+        const { latitude: lat, longitude: lng } = station.location;
 
-    const { latitude, longitude } = station.location;
+        return (
+            <Map
+                center={{ lat, lng }}
+                grid={false}
+                height="200px"
+                draggable={false}
+                scope={false}
+                centerMarker={MarkerColor.Disabled}
+                zoom={14}
+            />
+        )
+    }, [
+        station
+    ]);
 
+    console.log({ station });
     return (
         <IonPage>
             <IonHeader>
@@ -69,26 +85,18 @@ const Item: React.FC<Props> = ({ match }) => {
                     </IonToolbar>
                 </IonHeader> */}
                 {/* <StationEdit id={station} /> */}
-                <Map
-                    center={[latitude, longitude]}
-                    // grid={false}
-                    height="200px"
-                    draggable={false}
-                    scope={false}
-                    centerMarker={MarkerColor.Disabled}
-                    zoom={14}
-                />
+                {mapElement}
                 <IonList>
                     <IonListHeader>
                         <IonLabel>Information</IonLabel>
                     </IonListHeader>
                     <IonItem>
                         <IonLabel>Name</IonLabel>
-                        <IonLabel slot="end" color="medium">{station.name}</IonLabel>
+                        <IonLabel slot="end" color="medium">{station?.name}</IonLabel>
                     </IonItem>
                     <IonItem>
                         <IonLabel>Address</IonLabel>
-                        <IonLabel slot="end" color="medium">{station.address}</IonLabel>
+                        <IonLabel slot="end" color="medium">{station?.address}</IonLabel>
                     </IonItem>
                     <IonListHeader>
                         <IonLabel>Vehicles</IonLabel>
@@ -110,6 +118,8 @@ const Item: React.FC<Props> = ({ match }) => {
             </IonContent>
         </IonPage>
     );
-};
+});
+
+Item.displayName = 'StationItem';
 
 export default Item;

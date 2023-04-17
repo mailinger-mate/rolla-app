@@ -32,13 +32,15 @@ const FirebaseContext = React.createContext<Context>({
 
 export const useFirebaseContext = () => React.useContext(FirebaseContext);
 
-const FirebaseProvider: React.FC = (props) => {
+const FirebaseProvider = React.memo((props) => {
     return (
         <FirebaseContext.Provider value={{ app, analytics, db }}>
             {props.children}
         </FirebaseContext.Provider>
     );
 
-};
+});
+
+FirebaseProvider.displayName = 'FirebaseProvider';
 
 export default FirebaseProvider;

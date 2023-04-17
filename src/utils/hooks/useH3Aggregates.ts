@@ -28,12 +28,7 @@ export const useH3Aggregates = <
 ): H3Aggregates => {
     const { db } = useFirebaseContext();
     const {
-        location: {
-            h3Index,
-            h3RangeStart,
-            h3RangeEnd,
-            h3Resolution
-        },
+        location,
         scope,
     } = useLocationContext();
 
@@ -61,10 +56,16 @@ export const useH3Aggregates = <
     });
 
     React.useEffect(() => {
-        if (!scope) return;
-        getCountFromServer(query(db, h3RangeStart, h3RangeEnd))
+        if (!scope || !location) return;
+        const {
+            h3Index,
+            h3RangeStart,
+            h3RangeEnd,
+            h3Resolution
+        } = location;
+        Promise.resolve()// getCountFromServer(query(db, h3RangeStart, h3RangeEnd))
             .then(aggregate => {
-                const count = aggregate.data().count;
+                const count = Math.floor(Math.random()*5);//aggregate.data().count;
                 console.log('useH3Aggregates', h3RangeStart, h3RangeEnd, count);
                 setAggregate({
                     count,
@@ -73,10 +74,10 @@ export const useH3Aggregates = <
                 });
             })
     }, [
-        h3Index,
-        h3RangeStart,
-        h3RangeEnd,
-        h3Resolution,
+        location?.h3Index,
+        location?.h3RangeStart,
+        location?.h3RangeEnd,
+        location?.h3Resolution,
         scope,
     ]);
 

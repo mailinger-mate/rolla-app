@@ -31,4 +31,6 @@ const GoogleMapProvider = React.memo(({ children }) => {
 
 });
 
+GoogleMapProvider.displayName = 'GoogleMapProvider';
+
 export default GoogleMapProvider;
